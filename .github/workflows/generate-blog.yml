@@ -39,7 +39,7 @@ jobs:
           echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > config/google/credentials.json
           echo '${{ secrets.BLOGGER_TOKEN_JSON }}' > config/google/token.json
 
-      - name: Generate blog posts (3 categories)
+      - name: Generate blog posts (3 categories, as drafts)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
@@ -51,18 +51,18 @@ jobs:
             COUNT="${{ github.event.inputs.count || '1' }}"
             for i in $(seq 1 $COUNT); do
               echo "=== Generating $CATEGORY post $i/$COUNT ==="
-              python -m blog_agents generate --category "$CATEGORY" --auto --publish
+              python -m blog_agents generate "$CATEGORY" --auto --draft
             done
           else
-            # 자동 실행: 3개 카테고리 각 1편씩
+            # 자동 실행: 3개 카테고리 각 1편씩 (초안으로 저장)
             echo "=== 1/3: 거시경제·금융정책 ==="
-            python -m blog_agents generate --category macro --auto --publish
+            python -m blog_agents generate macro --auto --draft
 
             echo "=== 2/3: 부동산·세법 ==="
-            python -m blog_agents generate --category realestate --auto --publish
+            python -m blog_agents generate realestate --auto --draft
 
             echo "=== 3/3: 기업법·공정거래 ==="
-            python -m blog_agents generate --category corporate --auto --publish
+            python -m blog_agents generate corporate --auto --draft
           fi
 
       - name: Upload generated content

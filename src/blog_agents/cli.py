@@ -56,6 +56,14 @@ def generate(
         False, "--auto", "-a",
         help="토픽 자동 선택 (사용자 입력 없이 실행)",
     ),
+    publish_flag: bool = typer.Option(
+        False, "--publish", "-p",
+        help="생성 후 Blogger에 자동 발행",
+    ),
+    draft: bool = typer.Option(
+        False, "--draft",
+        help="Blogger에 초안으로 발행 (--publish와 함께 사용)",
+    ),
     project_dir: Optional[str] = typer.Option(
         None, "--project-dir", "-d",
         help="프로젝트 루트 디렉토리 (기본: 현재 위치에서 자동 감지)",
@@ -65,11 +73,19 @@ def generate(
     cat = _resolve_category(category)
     config = _get_config(project_dir)
 
+    # --draft 사용 시 --publish 자동 활성화
+    if draft:
+        publish_flag = True
+
+    publish_mode = ""
+    if publish_flag:
+        publish_mode = f"\n발행: {'초안(draft)' if draft else '즉시 공개'}"
+
     console.print(
         Panel(
             f"[bold]경제·법률 블로그 에이전트[/]\n"
             f"카테고리: {cat.display_name}\n"
-            f"모드: {'자동' if auto else '수동 (토픽 선택)'}",
+            f"모드: {'자동' if auto else '수동 (토픽 선택)'}{publish_mode}",
             title="blog-agents generate",
             style="blue",
         )
@@ -80,12 +96,67 @@ def generate(
         result = orchestrator.run_full_pipeline(cat, auto_select=auto)
         if result:
             console.print("\n[bold green]블로그 포스트 생성 완료![/]")
+
+            # Blogger 발행
+            if publish_flag:
+                _auto_publish(config, cat, result, is_draft=draft)
         else:
             console.print("\n[yellow]포스트를 생성하지 못했습니다.[/]")
     except KeyboardInterrupt:
         console.print("\n[yellow]사용자에 의해 중단됨[/]")
     finally:
         orchestrator.cleanup()
+
+
+def _auto_publish(config: AppConfig, category, blog_post, is_draft: bool = False):
+    """생성된 글을 Blogger에 자동 발행."""
+    blog_id = config.settings.blogger_blog_id
+    if not blog_id:
+        console.print("[yellow]BLOGGER_BLOG_ID 미설정 → Blogger 발행 건너뜀[/]")
+        return
+
+    try:
+        from blog_agents.publisher.blogger import BloggerPublisher
+        from blog_agents.utils.storage import StorageManager
+
+        credentials_path = config.root / config.settings.google_credentials_path
+        publisher = BloggerPublisher(credentials_path, blog_id)
+
+        # 최신 published 파일 찾기
+        storage = StorageManager(config.output_dir)
+        published_files = storage.list_files("published", "*.md")
+        if not published_files:
+            console.print("[yellow]발행할 파일을 찾을 수 없습니다.[/]")
+            return
+
+        md_path = published_files[0]  # 가장 최신 파일
+
+        # 카테고리별 라벨
+        labels = None
+        yaml_config = config._yaml.get("blogger", {}).get("default_labels", {})
+        for cat_key, cat_labels in yaml_config.items():
+            if cat_key in md_path.name:
+                labels = cat_labels
+                break
+
+        result = publisher.publish_markdown_file(
+            md_path, labels=labels, is_draft=is_draft
+        )
+
+        status = "초안" if is_draft else "공개"
+        console.print(
+            Panel(
+                f"[bold green]Blogger {status} 완료![/]\n\n"
+                f"제목: {result.get('title', 'N/A')}\n"
+                f"URL: {result.get('url', 'N/A')}\n"
+                f"상태: {status}",
+                style="green",
+            )
+        )
+    except ImportError:
+        console.print("[yellow]Blogger 의존성 미설치 → 발행 건너뜀[/]")
+    except Exception as e:
+        console.print(f"[red]Blogger 발행 실패: {e}[/]")
 
 
 @app.command()
