@@ -39,7 +39,7 @@ jobs:
           echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > config/google/credentials.json
           echo '${{ secrets.BLOGGER_TOKEN_JSON }}' > config/google/token.json
 
-      - name: Generate blog posts (4 categories, as drafts)
+      - name: Generate blog posts (2 per day, rotating categories)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
@@ -54,18 +54,22 @@ jobs:
               python -m blog_agents generate "$CATEGORY" --auto --draft
             done
           else
-            # 자동 실행: 4개 카테고리 각 1편씩 (초안으로 저장)
-            echo "=== 1/4: 거시경제·금융정책 ==="
-            python -m blog_agents generate macro --auto --draft
+            # 자동 실행: 하루 2편, 요일별 로테이션
+            # 월/수/금/일(1,3,5,0) → 거시경제 + 부동산
+            # 화/목/토(2,4,6)     → 기업법 + 글로벌뉴스
+            DOW=$(date -u +%u)  # 1=월 ~ 7=일
 
-            echo "=== 2/4: 부동산·세법 ==="
-            python -m blog_agents generate realestate --auto --draft
-
-            echo "=== 3/4: 기업법·공정거래 ==="
-            python -m blog_agents generate corporate --auto --draft
-
-            echo "=== 4/4: 글로벌 뉴스 ==="
-            python -m blog_agents generate global --auto --draft
+            if [ $((DOW % 2)) -eq 1 ]; then
+              echo "=== [Day $DOW] 1/2: 거시경제·금융정책 ==="
+              python -m blog_agents generate macro --auto --draft
+              echo "=== [Day $DOW] 2/2: 부동산·세법 ==="
+              python -m blog_agents generate realestate --auto --draft
+            else
+              echo "=== [Day $DOW] 1/2: 기업법·공정거래 ==="
+              python -m blog_agents generate corporate --auto --draft
+              echo "=== [Day $DOW] 2/2: 글로벌 뉴스 ==="
+              python -m blog_agents generate global --auto --draft
+            fi
           fi
 
       - name: Upload generated content
