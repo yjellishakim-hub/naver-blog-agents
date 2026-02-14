@@ -125,22 +125,21 @@ def _auto_publish(config: AppConfig, category, blog_post, is_draft: bool = False
         credentials_path = config.root / config.settings.google_credentials_path
         publisher = BloggerPublisher(credentials_path, blog_id)
 
-        # 최신 published 파일 찾기
+        # 해당 카테고리의 최신 published 파일 찾기
         storage = StorageManager(config.output_dir)
-        published_files = storage.list_files("published", "*.md")
+        cat_value = category.value if hasattr(category, 'value') else str(category)
+        published_files = storage.list_files("published", f"*{cat_value}*.md")
         if not published_files:
             console.print("[yellow]발행할 파일을 찾을 수 없습니다.[/]")
             return
 
-        md_path = published_files[0]  # 가장 최신 파일
+        md_path = published_files[0]  # 해당 카테고리의 가장 최신 파일
 
         # 카테고리별 라벨
         labels = None
         yaml_config = config._yaml.get("blogger", {}).get("default_labels", {})
-        for cat_key, cat_labels in yaml_config.items():
-            if cat_key in md_path.name:
-                labels = cat_labels
-                break
+        if cat_value in yaml_config:
+            labels = yaml_config[cat_value]
 
         result = publisher.publish_markdown_file(
             md_path, labels=labels, is_draft=is_draft
