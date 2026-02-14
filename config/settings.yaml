@@ -25,6 +25,7 @@ content:
     - macro_finance
     - real_estate_tax
     - corporate_fair
+    - global_news
   rotation: "round_robin"
 
 # 저장
@@ -39,3 +40,4 @@ blogger:
     macro_finance: ["거시경제", "금융정책", "한국은행"]
     real_estate_tax: ["부동산", "세법", "부동산정책"]
     corporate_fair: ["기업법", "공정거래", "기업지배구조"]
+    global_news: ["글로벌뉴스", "세계경제", "국제이슈"]

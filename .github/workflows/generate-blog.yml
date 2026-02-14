@@ -8,7 +8,7 @@ on:
     # 수동 실행도 가능
     inputs:
       category:
-        description: '카테고리 (macro, realestate, corporate)'
+        description: '카테고리 (macro, realestate, corporate, global)'
         required: false
         default: ''
       count:
@@ -39,7 +39,7 @@ jobs:
           echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > config/google/credentials.json
           echo '${{ secrets.BLOGGER_TOKEN_JSON }}' > config/google/token.json
 
-      - name: Generate blog posts (3 categories, as drafts)
+      - name: Generate blog posts (4 categories, as drafts)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
@@ -54,15 +54,18 @@ jobs:
               python -m blog_agents generate "$CATEGORY" --auto --draft
             done
           else
-            # 자동 실행: 3개 카테고리 각 1편씩 (초안으로 저장)
-            echo "=== 1/3: 거시경제·금융정책 ==="
+            # 자동 실행: 4개 카테고리 각 1편씩 (초안으로 저장)
+            echo "=== 1/4: 거시경제·금융정책 ==="
             python -m blog_agents generate macro --auto --draft
 
-            echo "=== 2/3: 부동산·세법 ==="
+            echo "=== 2/4: 부동산·세법 ==="
             python -m blog_agents generate realestate --auto --draft
 
-            echo "=== 3/3: 기업법·공정거래 ==="
+            echo "=== 3/4: 기업법·공정거래 ==="
             python -m blog_agents generate corporate --auto --draft
+
+            echo "=== 4/4: 글로벌 뉴스 ==="
+            python -m blog_agents generate global --auto --draft
           fi
 
       - name: Upload generated content

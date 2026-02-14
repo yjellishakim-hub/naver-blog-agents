@@ -12,6 +12,7 @@ class ContentCategory(str, Enum):
     MACRO_FINANCE = "macro_finance"
     REAL_ESTATE_TAX = "real_estate_tax"
     CORPORATE_FAIR = "corporate_fair"
+    GLOBAL_NEWS = "global_news"
 
     @property
     def display_name(self) -> str:
@@ -19,6 +20,7 @@ class ContentCategory(str, Enum):
             "macro_finance": "거시경제·금융정책",
             "real_estate_tax": "부동산·세법",
             "corporate_fair": "기업법·공정거래",
+            "global_news": "글로벌 뉴스",
         }
         return names[self.value]
 

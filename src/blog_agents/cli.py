@@ -26,6 +26,9 @@ CATEGORY_MAP = {
     "real_estate_tax": ContentCategory.REAL_ESTATE_TAX,
     "corporate": ContentCategory.CORPORATE_FAIR,
     "corporate_fair": ContentCategory.CORPORATE_FAIR,
+    "global": ContentCategory.GLOBAL_NEWS,
+    "global_news": ContentCategory.GLOBAL_NEWS,
+    "news": ContentCategory.GLOBAL_NEWS,
 }
 
 
@@ -36,7 +39,7 @@ def _resolve_category(category: str) -> ContentCategory:
         return CATEGORY_MAP[key]
     raise typer.BadParameter(
         f"알 수 없는 카테고리: '{category}'. "
-        f"사용 가능: macro, realestate, corporate"
+        f"사용 가능: macro, realestate, corporate, global"
     )
 
 

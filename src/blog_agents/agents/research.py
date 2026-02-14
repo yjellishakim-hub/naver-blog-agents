@@ -38,30 +38,15 @@ class ResearchAgent(BaseAgent):
         """카테고리별 최신 이슈를 수집하고 블로그 토픽을 제안한다."""
         console.print(f"\n[bold blue]리서치 에이전트: {category.display_name} 토픽 탐색[/]")
 
-        # 1. RSS 피드 수집
-        console.print("  RSS 피드 수집 중...", style="dim")
-        rss_urls = self.rss_reader.get_urls_for_category(category.value)
-        rss_items = self.rss_reader.fetch_feeds(rss_urls, days_back=7)
-
-        # 2. 정부 보도자료 스크래핑
-        console.print("  정부 보도자료 확인 중...", style="dim")
-        scraped_items = []
-        scrape_config = self.config.sources.get("government_scrape", {})
         mapping = self.config.sources.get("category_source_mapping", {}).get(
             category.value, {}
         )
-        for agency in mapping.get("government", []):
-            if agency in scrape_config:
-                items = self.scraper.scrape_press_releases(agency)
-                scraped_items.extend(items)
 
-        # 3. 키워드 기반 뉴스 검색
-        console.print("  뉴스 검색 중...", style="dim")
-        keywords = mapping.get("news_keywords", [])
-        search_results = []
-        for kw in keywords[:3]:  # 상위 3개 키워드만
-            results = self.searcher.search_news(f"{kw} 2026", max_results=3)
-            search_results.extend(results)
+        # 글로벌 뉴스: 해외 RSS 중심 수집
+        if category == ContentCategory.GLOBAL_NEWS:
+            rss_items, scraped_items, search_results = self._collect_global_news(mapping)
+        else:
+            rss_items, scraped_items, search_results = self._collect_domestic_news(category, mapping)
 
         # 4. 수집 데이터를 Claude에게 전달하여 토픽 제안
         raw_data = self._format_raw_data(
@@ -163,6 +148,54 @@ class ResearchAgent(BaseAgent):
             f"데이터 {len(brief.data_points)}개)[/]"
         )
         return brief
+
+    def _collect_domestic_news(self, category, mapping):
+        """국내 뉴스 수집 (기존 카테고리용)."""
+        # 1. RSS 피드 수집
+        console.print("  RSS 피드 수집 중...", style="dim")
+        rss_urls = self.rss_reader.get_urls_for_category(category.value)
+        rss_items = self.rss_reader.fetch_feeds(rss_urls, days_back=7)
+
+        # 2. 정부 보도자료 스크래핑
+        console.print("  정부 보도자료 확인 중...", style="dim")
+        scraped_items = []
+        scrape_config = self.config.sources.get("government_scrape", {})
+        for agency in mapping.get("government", []):
+            if agency in scrape_config:
+                items = self.scraper.scrape_press_releases(agency)
+                scraped_items.extend(items)
+
+        # 3. 키워드 기반 뉴스 검색
+        console.print("  뉴스 검색 중...", style="dim")
+        keywords = mapping.get("news_keywords", [])
+        search_results = []
+        for kw in keywords[:3]:
+            results = self.searcher.search_news(f"{kw} 2026", max_results=3)
+            search_results.extend(results)
+
+        return rss_items, scraped_items, search_results
+
+    def _collect_global_news(self, mapping):
+        """글로벌 뉴스 수집 (해외 RSS 중심)."""
+        # 1. 글로벌 RSS 피드 수집
+        console.print("  글로벌 뉴스 RSS 수집 중...", style="dim")
+        global_rss_config = self.config.sources.get("global_news_rss", {})
+        global_urls = []
+        for source_name, feeds in global_rss_config.items():
+            for feed_name, url in feeds.items():
+                global_urls.append(url)
+
+        rss_items = self.rss_reader.fetch_feeds(global_urls, days_back=2)
+
+        # 2. 글로벌 키워드 검색
+        console.print("  글로벌 뉴스 검색 중...", style="dim")
+        keywords = mapping.get("news_keywords", [])
+        search_results = []
+        for kw in keywords[:4]:
+            results = self.searcher.search_news(kw, max_results=3)
+            search_results.extend(results)
+
+        return rss_items, [], search_results
 
     def _format_raw_data(
         self, rss_items, scraped_items, search_results, category

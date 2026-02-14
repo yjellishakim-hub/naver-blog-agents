@@ -17,6 +17,7 @@ STYLE_PROMPTS = {
     ContentCategory.MACRO_FINANCE: "writer_macro.md",
     ContentCategory.REAL_ESTATE_TAX: "writer_realestate.md",
     ContentCategory.CORPORATE_FAIR: "writer_corporate.md",
+    ContentCategory.GLOBAL_NEWS: "writer_global_news.md",
 }
 
 

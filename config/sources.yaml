@@ -23,6 +23,21 @@ news_rss:
   매일경제:
     all: "https://www.mk.co.kr/rss/40300001/"
 
+global_news_rss:
+  Reuters:
+    world: "https://feeds.reuters.com/reuters/worldNews"
+    business: "https://feeds.reuters.com/reuters/businessNews"
+    technology: "https://feeds.reuters.com/reuters/technologyNews"
+  BBC:
+    world: "http://feeds.bbci.co.uk/news/world/rss.xml"
+    business: "http://feeds.bbci.co.uk/news/business/rss.xml"
+  AP_News:
+    top: "https://rsshub.app/apnews/topics/apf-topnews"
+  Al_Jazeera:
+    all: "https://www.aljazeera.com/xml/rss/all.xml"
+  CNBC:
+    world: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"
+
 category_source_mapping:
   macro_finance:
     government: ["기획재정부", "금융위원회"]
@@ -33,3 +48,7 @@ category_source_mapping:
   corporate_fair:
     government: ["공정거래위원회"]
     news_keywords: ["공정거래", "독점", "기업결합", "상법", "ESG", "지배구조", "하도급", "대기업집단"]
+  global_news:
+    government: []
+    news_keywords: ["world news today", "breaking news", "global economy", "geopolitics", "AI technology", "climate change"]
+    use_global_rss: true
