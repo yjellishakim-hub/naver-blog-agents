@@ -132,6 +132,114 @@ def research(
 
 
 @app.command()
+def publish(
+    file: Optional[str] = typer.Argument(
+        None,
+        help="발행할 마크다운 파일 경로 (미지정 시 최신 글 선택)",
+    ),
+    draft: bool = typer.Option(
+        False, "--draft",
+        help="초안으로 발행 (바로 공개하지 않음)",
+    ),
+    project_dir: Optional[str] = typer.Option(
+        None, "--project-dir", "-d",
+    ),
+):
+    """생성된 글을 Google Blogger에 발행"""
+    config = _get_config(project_dir)
+
+    # Blog ID 확인
+    blog_id = config.settings.blogger_blog_id
+    if not blog_id:
+        console.print(
+            "[red]BLOGGER_BLOG_ID가 설정되지 않았습니다.[/]\n\n"
+            "1. Blogger(blogger.com)에서 블로그를 생성하세요\n"
+            "2. 블로그 대시보드 URL에서 blogID를 복사하세요\n"
+            "   예: blogger.com/blog/posts/1234567890\n"
+            "3. .env 파일에 추가: BLOGGER_BLOG_ID=1234567890"
+        )
+        raise typer.Exit(1)
+
+    # 발행할 파일 결정
+    if file:
+        md_path = Path(file)
+    else:
+        from blog_agents.utils.storage import StorageManager
+        storage = StorageManager(config.output_dir)
+        published = storage.list_files("published", "*.md")
+        if not published:
+            console.print("[yellow]발행할 글이 없습니다. 먼저 generate를 실행하세요.[/]")
+            raise typer.Exit(1)
+
+        # 최신 파일 표시
+        console.print("[bold]발행 가능한 글:[/]\n")
+        for i, p in enumerate(published[:5], 1):
+            console.print(f"  [cyan]{i}.[/] {p.name}")
+
+        from rich.prompt import IntPrompt
+        choice = IntPrompt.ask(
+            "\n번호 선택", default=1,
+            choices=[str(i) for i in range(1, min(len(published), 5) + 1)]
+        )
+        md_path = published[choice - 1]
+
+    if not md_path.exists():
+        console.print(f"[red]파일을 찾을 수 없습니다: {md_path}[/]")
+        raise typer.Exit(1)
+
+    console.print(
+        Panel(
+            f"[bold]Blogger 발행[/]\n"
+            f"파일: {md_path.name}\n"
+            f"모드: {'초안' if draft else '즉시 발행'}",
+            title="blog-agents publish",
+            style="blue",
+        )
+    )
+
+    try:
+        from blog_agents.publisher.blogger import BloggerPublisher
+
+        credentials_path = config.root / config.settings.google_credentials_path
+        publisher = BloggerPublisher(credentials_path, blog_id)
+
+        # 카테고리별 라벨 추가
+        labels = None
+        yaml_config = config._yaml.get("blogger", {}).get("default_labels", {})
+        for cat_key, cat_labels in yaml_config.items():
+            if cat_key in md_path.name:
+                labels = cat_labels
+                break
+
+        result = publisher.publish_markdown_file(
+            md_path, labels=labels, is_draft=draft
+        )
+
+        console.print(
+            Panel(
+                f"[bold green]발행 완료![/]\n\n"
+                f"제목: {result.get('title', 'N/A')}\n"
+                f"URL: {result.get('url', 'N/A')}\n"
+                f"상태: {'초안' if draft else '공개'}",
+                style="green",
+            )
+        )
+
+    except ImportError:
+        console.print(
+            "[red]Blogger 의존성이 설치되지 않았습니다.[/]\n"
+            "실행: pip install blog-agents[publisher]"
+        )
+        raise typer.Exit(1)
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]발행 실패: {e}[/]")
+        raise typer.Exit(1)
+
+
+@app.command()
 def status(
     project_dir: Optional[str] = typer.Option(
         None, "--project-dir", "-d",

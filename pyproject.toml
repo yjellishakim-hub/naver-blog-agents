@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "한국 경제·법률 전문 블로그 멀티 에이전트 자동화 시스템"
 requires-python = ">=3.9"
 dependencies = [
-    "anthropic>=0.39.0",
+    "google-genai>=1.0.0",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
     "pyyaml>=6.0",

@@ -1,0 +1,71 @@
+name: Generate Blog Post
+
+on:
+  schedule:
+    # 매일 한국시간 오전 9시 (UTC 0시) 실행
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # 수동 실행도 가능
+    inputs:
+      category:
+        description: '카테고리 (macro, realestate, corporate)'
+        required: false
+        default: ''
+      count:
+        description: '생성할 글 수'
+        required: false
+        default: '1'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Restore Blogger token
+        run: |
+          mkdir -p config/google
+          echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > config/google/credentials.json
+          echo '${{ secrets.BLOGGER_TOKEN_JSON }}' > config/google/token.json
+
+      - name: Generate and publish blog post
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+        run: |
+          CATEGORY="${{ github.event.inputs.category }}"
+          COUNT="${{ github.event.inputs.count || '1' }}"
+
+          # 카테고리가 지정되지 않으면 라운드 로빈
+          if [ -z "$CATEGORY" ]; then
+            CATEGORIES=("macro" "realestate" "corporate")
+            DAY_OF_YEAR=$(date +%j)
+            IDX=$(( DAY_OF_YEAR % 3 ))
+            CATEGORY="${CATEGORIES[$IDX]}"
+          fi
+
+          echo "Category: $CATEGORY, Count: $COUNT"
+
+          for i in $(seq 1 $COUNT); do
+            echo "=== Generating post $i/$COUNT ==="
+            python -m blog_agents generate --category "$CATEGORY" --auto --publish
+          done
+
+      - name: Upload generated content
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blog-output-${{ github.run_number }}
+          path: output/
+          retention-days: 30

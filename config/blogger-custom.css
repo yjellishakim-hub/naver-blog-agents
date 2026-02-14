@@ -1,0 +1,553 @@
+/* ============================================
+   경제법률 인사이트 - Blogger Custom CSS
+
+   적용 방법:
+   Blogger > 테마 > 맞춤설정 > 고급 > CSS 추가
+   이 파일의 내용을 전체 복사하여 붙여넣기
+   ============================================ */
+
+/* ---------- Google Fonts ---------- */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+/* ---------- Base Override ---------- */
+body {
+  font-family: 'Pretendard Variable', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  color: #3A3330 !important;
+  background-color: #FAF6F1 !important;
+  line-height: 1.8 !important;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: #2D2320; transition: color 0.2s ease; }
+a:hover { color: #D35400 !important; }
+
+/* ---------- Header ---------- */
+.header-outer,
+#header-wrapper,
+.Header {
+  background: #FFFFFF !important;
+  border-bottom: 3px solid #D35400 !important;
+}
+
+.header-outer .Header h1,
+.header-outer .Header h1 a,
+.header-outer .Header p,
+#header-wrapper h1 a {
+  color: #1F1F1F !important;
+  font-weight: 800 !important;
+  font-size: 24px !important;
+  letter-spacing: -0.5px;
+  text-shadow: none !important;
+}
+
+/* ---------- Navigation Tabs ---------- */
+.tabs-outer,
+.PageList {
+  background: #3D2E2A !important;
+  border: none !important;
+}
+
+.tabs-outer .PageList li a,
+.tabs-outer a {
+  color: #B8A99A !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 8px 18px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  transition: all 0.2s ease;
+}
+
+.tabs-outer .PageList li a:hover,
+.tabs-outer a:hover {
+  color: #FFFFFF !important;
+  background: rgba(211, 84, 0, 0.12) !important;
+}
+
+/* ---------- Main Content Area ---------- */
+.main-outer,
+.content-outer {
+  background: transparent !important;
+  border: none !important;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.main-inner {
+  padding: 40px 0 !important;
+}
+
+/* ---------- Blog Post Card (Index Page) ---------- */
+.blog-posts .post-outer {
+  background: #FFFFFF !important;
+  border-radius: 12px !important;
+  padding: 32px !important;
+  margin-bottom: 24px !important;
+  border: 1px solid #E5D9CC !important;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.blog-posts .post-outer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #D35400;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.blog-posts .post-outer:hover {
+  box-shadow: 0 8px 30px rgba(27, 42, 74, 0.08);
+  transform: translateY(-2px);
+}
+
+.blog-posts .post-outer:hover::before {
+  opacity: 1;
+}
+
+/* ---------- Post Title ---------- */
+.post-title,
+.post h3.post-title,
+h3.post-title {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: -0.5px !important;
+  margin-bottom: 12px !important;
+}
+
+.post-title a {
+  color: #2D2320 !important;
+}
+
+.post-title a:hover {
+  color: #D35400 !important;
+}
+
+/* Item page (single post) title */
+.item-page .post-title,
+.item .post-title,
+h1.post-title {
+  font-size: 32px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+  color: #2D2320 !important;
+  letter-spacing: -1px !important;
+  margin-bottom: 16px !important;
+}
+
+/* ---------- Post Meta (Date, Author) ---------- */
+.post-header .post-timestamp,
+.date-header span,
+.post-footer .post-author,
+.post-timestamp a {
+  font-size: 13px !important;
+  color: #8B7D6B !important;
+}
+
+/* ---------- Labels / Category Badge ---------- */
+.post-footer .post-labels a,
+.label-count,
+a.label-name {
+  display: inline-block;
+  padding: 4px 14px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-radius: 4px !important;
+  background: #FFF5EE !important;
+  color: #8B4513 !important;
+  text-transform: none !important;
+  margin: 2px 4px 2px 0;
+}
+
+/* ---------- Post Body ---------- */
+.post-body,
+.entry-content {
+  font-size: 17px !important;
+  line-height: 2 !important;
+  color: #3A3330 !important;
+  padding-top: 20px;
+}
+
+/* Headings in post body */
+.post-body h2 {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #2D2320 !important;
+  margin: 48px 0 20px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 2px solid #E5D9CC !important;
+  letter-spacing: -0.5px;
+  position: relative;
+}
+
+.post-body h2::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: #D35400;
+}
+
+.post-body h3 {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #4A3F38 !important;
+  margin: 36px 0 16px !important;
+  padding-left: 14px !important;
+  border-left: 3px solid #D35400 !important;
+}
+
+.post-body h4 {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: #4A3F38 !important;
+  margin: 24px 0 12px !important;
+}
+
+/* Paragraphs */
+.post-body p {
+  margin-bottom: 20px !important;
+}
+
+.post-body strong {
+  color: #2D2320;
+  font-weight: 700;
+}
+
+/* Lists */
+.post-body ul,
+.post-body ol {
+  margin: 16px 0 !important;
+  padding-left: 24px !important;
+}
+
+.post-body li {
+  margin-bottom: 8px !important;
+  line-height: 1.8 !important;
+}
+
+/* Blockquote */
+.post-body blockquote {
+  margin: 28px 0 !important;
+  padding: 24px 28px !important;
+  background: linear-gradient(135deg, #FAF6F1 0%, #F5EDE4 100%) !important;
+  border-left: 4px solid #D35400 !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-radius: 0 8px 8px 0 !important;
+  font-size: 16px !important;
+  color: #6B5D4F !important;
+  line-height: 1.8;
+}
+
+/* Tables */
+.post-body table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 24px 0 !important;
+  font-size: 15px !important;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #E5D9CC !important;
+}
+
+.post-body thead,
+.post-body th {
+  background: #3D2E2A !important;
+  color: #FFFFFF !important;
+  padding: 14px 18px !important;
+  text-align: left !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+.post-body td {
+  padding: 12px 18px !important;
+  border-bottom: 1px solid #E5D9CC !important;
+}
+
+.post-body tbody tr:nth-child(even) {
+  background: #FAF6F1;
+}
+
+.post-body tbody tr:hover {
+  background: #FFF5EE;
+}
+
+/* Horizontal Rule */
+.post-body hr {
+  border: none !important;
+  height: 1px !important;
+  background: #E5D9CC !important;
+  margin: 40px 0 !important;
+}
+
+/* Code */
+.post-body code {
+  background: #F5EDE4 !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  font-size: 15px !important;
+  color: #D35400 !important;
+}
+
+/* ---------- References Section ---------- */
+.post-body .references,
+.post-body div.references {
+  margin-top: 40px !important;
+  padding: 28px !important;
+  background: #FAF6F1 !important;
+  border-radius: 8px !important;
+  border: 1px solid #E5D9CC !important;
+}
+
+.post-body .references h3,
+.post-body .references h4 {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #2D2320 !important;
+  margin-bottom: 12px !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.post-body .references h3::after,
+.post-body .references h4::after {
+  display: none !important;
+}
+
+.post-body .references ul {
+  list-style: none !important;
+  padding: 0 !important;
+}
+
+.post-body .references li {
+  font-size: 13px !important;
+  color: #8B7D6B !important;
+  padding: 6px 0 !important;
+  padding-left: 16px !important;
+  position: relative;
+  line-height: 1.5 !important;
+}
+
+.post-body .references li::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: #D35400;
+  font-weight: 900;
+}
+
+/* ---------- Disclaimer ---------- */
+.post-body .disclaimer {
+  margin-top: 40px !important;
+  padding: 20px 24px !important;
+  background: #FFF8E7 !important;
+  border: 1px solid #F0E0B8 !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  color: #8B7355 !important;
+  line-height: 1.6;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar-outer,
+.sidebar .widget {
+  background: #FFFFFF !important;
+  border-radius: 12px !important;
+  border: 1px solid #E5D9CC !important;
+  padding: 28px !important;
+  margin-bottom: 24px !important;
+}
+
+.sidebar .widget h2,
+.sidebar .widget h3 {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #2D2320 !important;
+  margin-bottom: 20px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 2px solid #E5D9CC !important;
+  position: relative;
+}
+
+.sidebar .widget h2::after,
+.sidebar .widget h3::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: #D35400;
+}
+
+.sidebar .widget ul {
+  list-style: none !important;
+  padding: 0 !important;
+}
+
+.sidebar .widget li {
+  margin-bottom: 4px !important;
+}
+
+.sidebar .widget li a {
+  display: block;
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #6B5D4F !important;
+  transition: all 0.2s ease;
+}
+
+.sidebar .widget li a:hover {
+  background: #FAF6F1 !important;
+  color: #2D2320 !important;
+}
+
+/* Label cloud in sidebar */
+.sidebar .Label .label-count {
+  background: #F0E6DC !important;
+  color: #8B7D6B !important;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+}
+
+/* Popular posts widget */
+.sidebar .PopularPosts .post-title a {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #3A3330 !important;
+  line-height: 1.5 !important;
+}
+
+.sidebar .PopularPosts .post-title a:hover {
+  color: #D35400 !important;
+}
+
+/* ---------- Footer ---------- */
+.footer-outer {
+  background: #3D2E2A !important;
+  border-top: 3px solid #D35400;
+  margin-top: 60px;
+}
+
+.footer-outer,
+.footer-outer a,
+.footer-outer .widget {
+  color: #9B8B7A !important;
+}
+
+.footer-outer a:hover {
+  color: #D35400 !important;
+}
+
+.footer-outer .widget h2 {
+  color: #FFFFFF !important;
+  border-bottom-color: rgba(255,255,255,0.1) !important;
+}
+
+.footer-outer .widget h2::after {
+  background: #D35400;
+}
+
+/* ---------- Comments ---------- */
+.comments .comment-block {
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #E5D9CC;
+}
+
+.comments .comment-author {
+  font-weight: 700 !important;
+  color: #2D2320 !important;
+}
+
+/* ---------- Pagination ---------- */
+.blog-pager a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E5D9CC !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #8B7D6B !important;
+  transition: all 0.2s ease;
+}
+
+.blog-pager a:hover {
+  background: #3D2E2A !important;
+  color: #FFFFFF !important;
+  border-color: #2D2320 !important;
+}
+
+/* ---------- Read More Link ---------- */
+.post-body .jump-link a,
+a.read-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #D35400 !important;
+}
+
+.post-body .jump-link a:hover {
+  color: #2D2320 !important;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .post-body {
+    font-size: 16px !important;
+    line-height: 1.9 !important;
+  }
+
+  .post-body h2 {
+    font-size: 20px !important;
+  }
+
+  .post-body h3 {
+    font-size: 18px !important;
+  }
+
+  h1.post-title,
+  .item .post-title {
+    font-size: 24px !important;
+  }
+
+  .blog-posts .post-outer {
+    padding: 24px !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* ---------- Print ---------- */
+@media print {
+  .header-outer, .sidebar-outer, .footer-outer,
+  .blog-pager, .comments {
+    display: none !important;
+  }
+
+  .post-body {
+    font-size: 12pt !important;
+  }
+}

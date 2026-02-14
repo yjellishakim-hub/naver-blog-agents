@@ -4,16 +4,16 @@ project:
   language: "ko"
   timezone: "Asia/Seoul"
 
-# 모델 배분
+# 모델 배분 (Gemini 무료 티어)
 models:
-  research: "claude-haiku-4-5-20250514"
-  writer: "claude-sonnet-4-5-20250514"
-  editor: "claude-sonnet-4-5-20250514"
-  metadata: "claude-haiku-4-5-20250514"
+  research: "gemini-2.5-flash-lite"
+  writer: "gemini-2.5-flash-lite"
+  editor: "gemini-2.5-flash-lite"
+  metadata: "gemini-2.5-flash-lite"
 
 # 품질 기준
 quality:
-  approval_threshold: 7.0
+  approval_threshold: 8.5
   max_revision_rounds: 3
   min_word_count: 1500
   max_word_count: 3000

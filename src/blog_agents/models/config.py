@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
+    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     law_api_key: str = Field(default="", alias="LAW_API_KEY")
     google_credentials_path: str = Field(
         default="config/google/credentials.json",

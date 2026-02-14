@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ScoreDimension(BaseModel):
@@ -15,8 +15,8 @@ class ScoreDimension(BaseModel):
 
 class LineEdit(BaseModel):
     location: str = Field(description="수정 위치 (섹션/문단 설명)")
-    original: str = Field(description="원문")
-    suggestion: str = Field(description="수정 제안")
+    original: str = Field(default="", description="원문")
+    suggestion: str = Field(default="", description="수정 제안")
     reason: str = Field(description="수정 이유")
 
 
@@ -27,9 +27,9 @@ class EditReview(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     overall_score: float = Field(ge=1.0, le=10.0, description="종합 점수")
     dimensions: list[ScoreDimension] = Field(
-        description="6개 차원별 평가"
+        default_factory=list, description="6개 차원별 평가"
     )
-    approved: bool = Field(description="승인 여부")
+    approved: bool = Field(default=False, description="승인 여부")
     revision_instructions: Optional[str] = Field(
         default=None, description="수정 요청 사항 (비승인 시)"
     )
@@ -39,3 +39,12 @@ class EditReview(BaseModel):
     strengths: list[str] = Field(
         default_factory=list, description="잘된 점"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def auto_approve(cls, data):
+        """approved 필드가 없으면 overall_score >= 8.5 기준으로 자동 결정."""
+        if isinstance(data, dict) and "approved" not in data:
+            score = data.get("overall_score", 0)
+            data["approved"] = score >= 8.5
+        return data

@@ -14,7 +14,7 @@ console = Console()
 
 
 class EditorAgent(BaseAgent):
-    """초안을 6개 차원에서 평가하고 피드백을 제공하는 편집장 에이전트."""
+    """초안을 7개 차원에서 평가하고 출처 팩트체크를 수행하는 편집장 에이전트."""
 
     agent_name = "편집장"
 
@@ -83,8 +83,14 @@ class EditorAgent(BaseAgent):
 
         parts.append(
             "\n---\n"
-            "위 초안을 6가지 차원(사실정확성, 법률용어, 가독성, SEO, 구조, 독창성)으로 "
-            "평가하고 구체적인 피드백을 제공해주세요."
+            "위 초안을 7가지 차원(사실정확성, 법률용어, 가독성, SEO, 구조, 독창성, 출처검증)으로 "
+            "평가하고 구체적인 피드백을 제공해주세요.\n\n"
+            "**특히 출처 검증을 철저히 수행하세요:**\n"
+            "- 초안 하단의 [참고자료]에 나열된 각 출처를 하나씩 검토\n"
+            "- 각 출처가 본문의 어떤 주장을 뒷받침하는지 매칭\n"
+            "- 존재하지 않는 매체, 의심스러운 출처, 내용과 무관한 출처 식별\n"
+            "- 본문의 핵심 주장 중 출처가 빠진 것이 있는지 확인\n"
+            "- 출처 검증 결과를 source_verification 차원 피드백에 포함"
         )
 
         return "\n".join(parts)
@@ -99,8 +105,8 @@ class EditorAgent(BaseAgent):
 
         for dim in review.dimensions:
             score_style = (
-                "green" if dim.score >= 7.0
-                else "yellow" if dim.score >= 5.0
+                "green" if dim.score >= 8.5
+                else "yellow" if dim.score >= 7.0
                 else "red"
             )
             table.add_row(

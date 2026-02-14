@@ -30,8 +30,16 @@ class RSSItem:
         }
 
 
+def _make_naive(dt: datetime) -> datetime:
+    """timezone-aware datetime을 naive로 변환 (UTC 기준)."""
+    if dt.tzinfo is not None:
+        dt = dt.utctimetuple()
+        return datetime(*dt[:6])
+    return dt
+
+
 def _parse_date(date_str: str | None) -> Optional[datetime]:
-    """다양한 한국어 날짜 형식을 파싱."""
+    """다양한 한국어 날짜 형식을 파싱. 항상 naive datetime 반환."""
     if not date_str:
         return None
 
@@ -54,7 +62,8 @@ def _parse_date(date_str: str | None) -> Optional[datetime]:
     ]
     for fmt in formats:
         try:
-            return datetime.strptime(date_str.strip(), fmt)
+            result = datetime.strptime(date_str.strip(), fmt)
+            return _make_naive(result)
         except ValueError:
             continue
 
