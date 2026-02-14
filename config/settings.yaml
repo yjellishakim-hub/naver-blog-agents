@@ -1,0 +1,41 @@
+# 블로그 에이전트 설정
+project:
+  name: "경제·법률 인사이트"
+  language: "ko"
+  timezone: "Asia/Seoul"
+
+# 모델 배분
+models:
+  research: "claude-haiku-4-5-20250514"
+  writer: "claude-sonnet-4-5-20250514"
+  editor: "claude-sonnet-4-5-20250514"
+  metadata: "claude-haiku-4-5-20250514"
+
+# 품질 기준
+quality:
+  approval_threshold: 7.0
+  max_revision_rounds: 3
+  min_word_count: 1500
+  max_word_count: 3000
+
+# 콘텐츠 설정
+content:
+  posts_per_week: 3
+  categories:
+    - macro_finance
+    - real_estate_tax
+    - corporate_fair
+  rotation: "round_robin"
+
+# 저장
+storage:
+  base_path: "./output"
+  filename_template: "{date}_{category}_{slug}"
+
+# Blogger (Phase 2)
+blogger:
+  blog_id: ""
+  default_labels:
+    macro_finance: ["거시경제", "금융정책", "한국은행"]
+    real_estate_tax: ["부동산", "세법", "부동산정책"]
+    corporate_fair: ["기업법", "공정거래", "기업지배구조"]

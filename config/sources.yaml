@@ -1,0 +1,35 @@
+# 데이터 소스 설정
+
+government_rss:
+  기획재정부:
+    press: "https://www.moef.go.kr/com/detailRssTagService.do?bbsId=MOSFBBS_000000000028"
+    policy: "https://www.moef.go.kr/com/detailRssTagService.do?bbsId=MOSFBBS_000000000039"
+  금융위원회:
+    press: "https://www.fsc.go.kr/about/fsc_bbs_rss/?fid=0111"
+  국토교통부:
+    press: "https://www.molit.go.kr/USR/p_etc_rsssvc/m_123/ers.jsp"
+
+government_scrape:
+  공정거래위원회:
+    url: "https://www.ftc.go.kr/www/selectReportUserList.do?key=10"
+    list_selector: "table.board_list tbody tr"
+    title_selector: "td.tit a"
+    date_selector: "td:nth-child(5)"
+
+news_rss:
+  한국경제:
+    economy: "https://www.hankyung.com/feed/economy"
+    realestate: "https://www.hankyung.com/feed/realestate"
+  매일경제:
+    all: "https://www.mk.co.kr/rss/40300001/"
+
+category_source_mapping:
+  macro_finance:
+    government: ["기획재정부", "금융위원회"]
+    news_keywords: ["금리", "물가", "GDP", "환율", "통화정책", "재정정책", "한국은행", "기준금리"]
+  real_estate_tax:
+    government: ["국토교통부", "기획재정부"]
+    news_keywords: ["부동산", "주택", "양도세", "종부세", "취득세", "임대차", "전세", "공시가격"]
+  corporate_fair:
+    government: ["공정거래위원회"]
+    news_keywords: ["공정거래", "독점", "기업결합", "상법", "ESG", "지배구조", "하도급", "대기업집단"]
