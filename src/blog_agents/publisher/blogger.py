@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.request
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -23,8 +25,9 @@ POST_INLINE_CSS = """
 .econlaw-post {
   font-family: 'Pretendard Variable', 'Noto Sans KR', -apple-system, sans-serif;
   color: #3A3330;
-  line-height: 2;
+  line-height: 1.9;
   font-size: 17px;
+  letter-spacing: -0.2px;
   word-break: keep-all;
   -webkit-font-smoothing: antialiased;
   max-width: 780px;
@@ -36,6 +39,7 @@ POST_INLINE_CSS = """
   margin: 48px 0 20px;
   padding-bottom: 12px;
   border-bottom: 2px solid #E5D9CC;
+  letter-spacing: -0.3px;
   position: relative;
 }
 .econlaw-post h2::after {
@@ -54,6 +58,7 @@ POST_INLINE_CSS = """
   margin: 36px 0 16px;
   padding-left: 14px;
   border-left: 3px solid #D35400;
+  letter-spacing: -0.3px;
 }
 .econlaw-post h4 {
   font-size: 17px;
@@ -62,8 +67,9 @@ POST_INLINE_CSS = """
   margin: 24px 0 12px;
 }
 .econlaw-post p {
-  margin-bottom: 20px;
-  line-height: 2;
+  margin-bottom: 18px;
+  line-height: 1.9;
+  letter-spacing: -0.2px;
 }
 .econlaw-post strong {
   color: #2D2320;
@@ -75,7 +81,8 @@ POST_INLINE_CSS = """
 }
 .econlaw-post li {
   margin-bottom: 8px;
-  line-height: 1.8;
+  line-height: 1.9;
+  letter-spacing: -0.2px;
 }
 .econlaw-post blockquote {
   margin: 28px 0;
@@ -87,6 +94,8 @@ POST_INLINE_CSS = """
   border-bottom: none;
   border-radius: 0 8px 8px 0;
   font-size: 16px;
+  line-height: 1.9;
+  letter-spacing: -0.2px;
   color: #6B5D4F;
 }
 .econlaw-post table {
@@ -140,26 +149,29 @@ POST_INLINE_CSS = """
 .econlaw-post .references li {
   font-size: 13px;
   color: #8B7D6B;
-  padding: 6px 0 6px 16px;
-  position: relative;
+  padding: 6px 0;
   line-height: 1.5;
 }
-.econlaw-post .references li::before {
-  content: '·';
-  position: absolute;
-  left: 0;
+.econlaw-post .references .ref-dot {
   color: #D35400;
   font-weight: 900;
+  margin-right: 6px;
 }
 .econlaw-post .disclaimer {
-  margin-top: 40px;
+  margin-top: 48px;
   padding: 20px 24px;
-  background: #FFF8E7;
-  border: 1px solid #F0E0B8;
+  background: #F8F9FA;
+  border: 1px solid #E2E6ED;
   border-radius: 8px;
-  font-size: 13px;
-  color: #8B7355;
-  line-height: 1.6;
+  font-size: 12.5px;
+  color: #6B7280;
+  line-height: 1.7;
+  letter-spacing: -0.1px;
+}
+.econlaw-post .disclaimer-icon {
+  font-size: 16px;
+  color: #9CA3AF;
+  margin-right: 6px;
 }
 .econlaw-post .toc {
   margin: 24px 0 36px;
@@ -304,6 +316,12 @@ class BloggerPublisher:
             f'  [green]Blogger {status} 완료![/] URL: {response.get("url", "N/A")}'
         )
 
+        # LIVE 발행 시 검색엔진에 색인 요청
+        if not is_draft:
+            post_url = response.get("url", "")
+            if post_url:
+                self._ping_search_engines(post_url)
+
         return response
 
     @staticmethod
@@ -368,6 +386,33 @@ class BloggerPublisher:
             }
             schemas.append(faq_schema)
 
+        # 3) BreadcrumbList 스키마 (구글 검색 결과에 카테고리 경로 표시)
+        category_name = labels[0] if labels else "경제"
+        breadcrumb = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "이코노로",
+                    "item": "https://econlaw-lab.blogspot.com",
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": category_name,
+                    "item": f"https://econlaw-lab.blogspot.com/search/label/{category_name}",
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": title,
+                },
+            ],
+        }
+        schemas.append(breadcrumb)
+
         parts = []
         for schema in schemas:
             json_str = json.dumps(schema, ensure_ascii=False, indent=2)
@@ -424,7 +469,7 @@ class BloggerPublisher:
 
         response = (
             self.service.posts()
-            .update(blogId=self.blog_id, postId=post_id, body=body)
+            .patch(blogId=self.blog_id, postId=post_id, body=body)
             .execute()
         )
 
@@ -464,6 +509,43 @@ class BloggerPublisher:
     def get_blog_info(self) -> dict:
         """블로그 기본 정보를 가져온다."""
         return self.service.blogs().get(blogId=self.blog_id).execute()
+
+    def _ping_search_engines(self, post_url: str):
+        """발행 후 구글·네이버에 색인 요청(ping)을 보낸다."""
+        blog_url = "https://econlaw-lab.blogspot.com"
+        sitemap_url = f"{blog_url}/sitemap.xml"
+
+        ping_targets = [
+            # Google Ping
+            (
+                "Google",
+                f"https://www.google.com/ping?sitemap={urllib.parse.quote(sitemap_url, safe='')}",
+            ),
+            # Google Webmaster Ping (블로그 업데이트 알림)
+            (
+                "Google Blog",
+                f"https://blogsearch.google.com/ping/RPC2",
+            ),
+            # Naver 웹마스터 Ping
+            (
+                "Naver",
+                f"https://searchadvisor.naver.com/indexnow?url={urllib.parse.quote(post_url, safe='')}",
+            ),
+            # IndexNow (Bing, Yandex, Naver 등 공동 프로토콜)
+            (
+                "IndexNow",
+                f"https://api.indexnow.org/indexnow?url={urllib.parse.quote(post_url, safe='')}&key=econlaw-lab",
+            ),
+        ]
+
+        for name, url in ping_targets:
+            try:
+                req = urllib.request.Request(url, method="GET")
+                req.add_header("User-Agent", "EconlawBlogBot/1.0")
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    console.print(f"  [{name}] 색인 요청 완료 (HTTP {resp.status})", style="dim")
+            except Exception:
+                console.print(f"  [{name}] 색인 요청 실패 (무시)", style="dim")
 
     @staticmethod
     def _extract_frontmatter_field(md_text: str, field: str) -> Optional[str]:

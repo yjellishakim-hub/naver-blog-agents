@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -19,6 +20,14 @@ from blog_agents.utils.storage import StorageManager, slugify
 console = Console()
 
 
+ROTATION_ORDER = [
+    ContentCategory.MACRO_FINANCE,
+    ContentCategory.REAL_ESTATE_TAX,
+    ContentCategory.CORPORATE_FAIR,
+    ContentCategory.GLOBAL_NEWS,
+]
+
+
 class BlogOrchestrator:
     """리서치 → 작성 → 편집 파이프라인을 관리하는 오케스트레이터."""
 
@@ -29,6 +38,63 @@ class BlogOrchestrator:
         self.editor_agent = EditorAgent(config)
         self.storage = StorageManager(config.output_dir)
         self.max_rounds = config.quality.get("max_revision_rounds", 3)
+
+    @property
+    def _rotation_state_path(self) -> Path:
+        return self.config.root / "config" / "rotation_state.json"
+
+    def get_next_category(self) -> ContentCategory:
+        """발행 이력을 확인해서 다음 로테이션 카테고리를 반환.
+
+        1순위: config/rotation_state.json (GitHub Actions 등 CI 환경에서도 동작)
+        2순위: output/published/ 파일명에서 추출 (로컬 환경)
+        """
+        last_category = None
+
+        # 1순위: 상태 파일에서 읽기
+        if self._rotation_state_path.exists():
+            try:
+                state = json.loads(
+                    self._rotation_state_path.read_text(encoding="utf-8")
+                )
+                last_value = state.get("last_category")
+                if last_value:
+                    last_category = ContentCategory(last_value)
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # 2순위: 로컬 published 파일에서 추출
+        if last_category is None:
+            published_files = self.storage.list_files("published", "*.md")
+            if published_files:
+                name = published_files[0].name
+                for cat in ContentCategory:
+                    if f"_{cat.value}_" in name:
+                        last_category = cat
+                        break
+
+        if last_category is None:
+            return ROTATION_ORDER[0]
+
+        # 다음 카테고리로 이동
+        try:
+            idx = ROTATION_ORDER.index(last_category)
+            next_idx = (idx + 1) % len(ROTATION_ORDER)
+        except ValueError:
+            next_idx = 0
+
+        return ROTATION_ORDER[next_idx]
+
+    def _save_rotation_state(self, category: ContentCategory) -> None:
+        """현재 사용된 카테고리를 상태 파일에 저장."""
+        state = {
+            "last_category": category.value,
+            "last_generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+        self._rotation_state_path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
     def run_full_pipeline(
         self,
@@ -102,6 +168,9 @@ class BlogOrchestrator:
             "_final",
             frontmatter=blog_post.frontmatter,
         )
+
+        # 로테이션 상태 저장
+        self._save_rotation_state(category)
 
         console.print(
             Panel(

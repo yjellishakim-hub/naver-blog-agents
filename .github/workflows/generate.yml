@@ -1,0 +1,58 @@
+name: 블로그 글 자동 생성
+
+on:
+  schedule:
+    # 한국시간 기준 오전 9시, 오후 3시 (UTC 0시, 6시)
+    - cron: '0 0 * * *'
+    - cron: '0 6 * * *'
+  workflow_dispatch:  # 수동 실행 가능
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 의존성 설치
+        run: |
+          pip install -e ".[publisher]"
+
+      - name: 환경 변수 및 인증 파일 설정
+        run: |
+          # .env 파일 생성
+          cat > .env << 'EOF'
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          BLOGGER_BLOG_ID=${{ secrets.BLOGGER_BLOG_ID }}
+          GOOGLE_CREDENTIALS_PATH=config/google/credentials.json
+          EOF
+
+          # Google OAuth 인증 파일 복원
+          mkdir -p config/google
+          echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > config/google/credentials.json
+          echo '${{ secrets.BLOGGER_TOKEN_JSON }}' > config/google/token.json
+
+      - name: 블로그 글 생성 (자동 로테이션)
+        run: |
+          blog-agents generate --auto --draft
+
+      - name: 로테이션 상태 저장 & 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add config/rotation_state.json
+          git diff --cached --quiet || git commit -m "chore: update rotation state"
+          git push

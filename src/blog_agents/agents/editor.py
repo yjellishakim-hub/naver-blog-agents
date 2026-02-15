@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 
 from rich.console import Console
 from rich.table import Table
@@ -29,7 +30,8 @@ class EditorAgent(BaseAgent):
             f'\n[bold magenta]편집장 에이전트: "{draft.title}" 검토 (v{draft.version})[/]'
         )
 
-        system_prompt = self._load_prompt("editor_agent.md")
+        today = datetime.now().strftime("%Y년 %m월 %d일")
+        system_prompt = self._load_prompt("editor_agent.md", today=today)
         user_message = self._format_for_review(draft, brief)
 
         review = self._call_structured(

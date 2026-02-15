@@ -51,9 +51,9 @@ def _get_config(project_dir: Optional[str] = None) -> AppConfig:
 
 @app.command()
 def generate(
-    category: str = typer.Argument(
-        ...,
-        help="콘텐츠 카테고리 (macro, realestate, corporate)",
+    category: Optional[str] = typer.Argument(
+        None,
+        help="콘텐츠 카테고리 (macro, realestate, corporate, global). 미지정 시 자동 로테이션",
     ),
     auto: bool = typer.Option(
         False, "--auto", "-a",
@@ -73,8 +73,17 @@ def generate(
     ),
 ):
     """전체 파이프라인 실행: 리서치 → 작성 → 편집 → 발행"""
-    cat = _resolve_category(category)
     config = _get_config(project_dir)
+
+    # 카테고리 미지정 시 자동 로테이션
+    if category:
+        cat = _resolve_category(category)
+    else:
+        orchestrator = BlogOrchestrator(config)
+        cat = orchestrator.get_next_category()
+        console.print(
+            f"[bold cyan]자동 로테이션:[/] 다음 카테고리 → {cat.display_name}",
+        )
 
     # --draft 사용 시 --publish 자동 활성화
     if draft:
@@ -135,11 +144,8 @@ def _auto_publish(config: AppConfig, category, blog_post, is_draft: bool = False
 
         md_path = published_files[0]  # 해당 카테고리의 가장 최신 파일
 
-        # 카테고리별 라벨
-        labels = None
-        yaml_config = config._yaml.get("blogger", {}).get("default_labels", {})
-        if cat_value in yaml_config:
-            labels = yaml_config[cat_value]
+        # 카테고리 display_name을 단일 라벨로 사용
+        labels = [category.display_name]
 
         result = publisher.publish_markdown_file(
             md_path, labels=labels, is_draft=is_draft
@@ -276,12 +282,11 @@ def publish(
         credentials_path = config.root / config.settings.google_credentials_path
         publisher = BloggerPublisher(credentials_path, blog_id)
 
-        # 카테고리별 라벨 추가
+        # 파일명에서 카테고리를 감지하여 단일 라벨 매핑
         labels = None
-        yaml_config = config._yaml.get("blogger", {}).get("default_labels", {})
-        for cat_key, cat_labels in yaml_config.items():
-            if cat_key in md_path.name:
-                labels = cat_labels
+        for cat in ContentCategory:
+            if cat.value in md_path.name:
+                labels = [cat.display_name]
                 break
 
         result = publisher.publish_markdown_file(
@@ -336,7 +341,14 @@ def fix_labels(
             console.print("[yellow]발행된 글이 없습니다.[/]")
             return
 
-        yaml_labels = config._yaml.get("blogger", {}).get("default_labels", {})
+        # 4개 카테고리 라벨 매핑 (제목 키워드 기반)
+        CATEGORY_KEYWORDS = {
+            "거시경제·금융정책": ["금리", "경제", "GDP", "인플레", "통화", "연준", "한국은행", "금값", "환율", "물가", "기준금리"],
+            "부동산·세법": ["부동산", "주택", "세금", "임대", "아파트", "분양", "세법", "양도세", "종부세", "취득세"],
+            "기업법·공정거래": ["기업", "공정거래", "독점", "M&A", "지배구조", "상법", "하도급", "ESG"],
+            "글로벌 뉴스": ["글로벌", "국제", "무역", "관세", "지정학"],
+        }
+        valid_labels = set(CATEGORY_KEYWORDS.keys())
         updated = 0
 
         for post in posts:
@@ -344,36 +356,24 @@ def fix_labels(
             title = post.get("title", "")
             existing_labels = post.get("labels", [])
 
-            # 카테고리 추정 (제목/라벨 기반)
-            new_labels = list(existing_labels)
-            for cat_key, cat_labels in yaml_labels.items():
-                # 이미 카테고리 라벨이 있으면 건너뜀
-                if any(cl in existing_labels for cl in cat_labels):
-                    continue
-                # 파일명이나 제목에서 카테고리 추정은 어려우므로, 라벨이 없는 글에 기본 라벨 추가
-                if not existing_labels:
-                    # 제목 키워드로 카테고리 추정
-                    macro_kw = ["금리", "경제", "GDP", "인플레", "통화", "연준", "한국은행", "금값", "환율"]
-                    realestate_kw = ["부동산", "주택", "세금", "임대", "아파트", "분양", "세법"]
-                    corporate_kw = ["기업", "공정거래", "독점", "M&A", "지배구조", "상법"]
-                    global_kw = ["글로벌", "미국", "중국", "EU", "국제", "무역"]
+            # 이미 4개 카테고리 중 하나만 있으면 건너뜀
+            if len(existing_labels) == 1 and existing_labels[0] in valid_labels:
+                console.print(f'  스킵 (정상): "{title}" → {existing_labels}', style="dim")
+                continue
 
-                    if any(kw in title for kw in macro_kw):
-                        new_labels = yaml_labels.get("macro_finance", [])
-                    elif any(kw in title for kw in realestate_kw):
-                        new_labels = yaml_labels.get("real_estate_tax", [])
-                    elif any(kw in title for kw in corporate_kw):
-                        new_labels = yaml_labels.get("corporate_fair", [])
-                    elif any(kw in title for kw in global_kw):
-                        new_labels = yaml_labels.get("global_news", [])
+            # 제목 키워드로 카테고리 추정
+            new_label = None
+            for label, keywords in CATEGORY_KEYWORDS.items():
+                if any(kw in title for kw in keywords):
+                    new_label = label
                     break
 
-            if new_labels and set(new_labels) != set(existing_labels):
-                publisher.update_post(post_id, labels=new_labels)
-                console.print(f'  [green]라벨 추가:[/] "{title}" → {new_labels}')
+            if new_label:
+                publisher.update_post(post_id, labels=[new_label])
+                console.print(f'  [green]라벨 수정:[/] "{title}" → [{new_label}]')
                 updated += 1
             else:
-                console.print(f'  스킵 (이미 라벨 있음): "{title}"', style="dim")
+                console.print(f'  [yellow]카테고리 추정 불가:[/] "{title}"')
 
         console.print(f"\n[green]총 {updated}개 글 라벨 업데이트 완료![/]")
 

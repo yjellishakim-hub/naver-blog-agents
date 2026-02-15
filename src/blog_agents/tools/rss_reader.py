@@ -122,10 +122,19 @@ class RSSReader:
             if pub_date and pub_date < cutoff:
                 continue
 
+            raw_url = entry.get("link", "")
+            # Google News RSS 리다이렉트 URL → 실제 기사 URL 변환
+            if "news.google.com/rss/articles/" in raw_url:
+                try:
+                    from blog_agents.tools.search import _resolve_google_news_url
+                    raw_url = _resolve_google_news_url(raw_url)
+                except Exception:
+                    pass
+
             items.append(
                 RSSItem(
                     title=entry.get("title", "").strip(),
-                    url=entry.get("link", ""),
+                    url=raw_url,
                     published=pub_date,
                     summary=self._clean_summary(
                         entry.get("summary", entry.get("description", ""))

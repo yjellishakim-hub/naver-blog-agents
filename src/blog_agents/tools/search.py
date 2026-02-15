@@ -10,6 +10,34 @@ from rich.console import Console
 console = Console()
 
 
+def _resolve_google_news_url(url: str) -> str:
+    """Google News RSS 리다이렉트 URL을 실제 기사 URL로 변환한다.
+
+    news.google.com/rss/articles/... 형태의 URL을 원본 기사 URL로 디코딩.
+    디코딩 실패 시 원본 URL을 그대로 반환한다.
+    """
+    if "news.google.com/rss/articles/" not in url:
+        return url
+
+    try:
+        from googlenewsdecoder import new_decoderv1
+
+        result = new_decoderv1(url, interval=1)
+        if result.get("status"):
+            decoded = result["decoded_url"]
+            console.print(f"  [URL] 디코딩: {decoded[:80]}...", style="dim")
+            return decoded
+    except ImportError:
+        console.print(
+            "  [URL] googlenewsdecoder 미설치 → Google News URL 그대로 사용",
+            style="yellow",
+        )
+    except Exception:
+        pass
+
+    return url
+
+
 @dataclass
 class SearchResult:
     title: str
@@ -65,10 +93,13 @@ class WebSearcher:
 
             feed = feedparser.parse(response.text)
             for entry in feed.entries[:max_results]:
+                raw_url = entry.get("link", "")
+                actual_url = _resolve_google_news_url(raw_url)
+
                 results.append(
                     SearchResult(
                         title=entry.get("title", "").strip(),
-                        url=entry.get("link", ""),
+                        url=actual_url,
                         snippet=self._clean_html(
                             entry.get("summary", "")
                         )[:300],

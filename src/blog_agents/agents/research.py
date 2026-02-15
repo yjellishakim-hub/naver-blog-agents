@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 
 from rich.console import Console
@@ -53,11 +54,13 @@ class ResearchAgent(BaseAgent):
             rss_items, scraped_items, search_results, category
         )
 
+        today = datetime.now().strftime("%Y년 %m월 %d일")
         system_prompt = self._load_prompt(
-            "research_agent.md", category=category.value
+            "research_agent.md", category=category.value, today=today
         )
 
         user_message = (
+            f"오늘 날짜: {today}\n\n"
             f"아래는 최근 {category.display_name} 분야의 수집 데이터입니다.\n"
             f"이 데이터를 분석하여 블로그 포스트로 작성하기 좋은 토픽 3개를 제안해주세요.\n\n"
             f"{raw_data}"
@@ -104,8 +107,9 @@ class ResearchAgent(BaseAgent):
         ]
 
         # Claude에게 브리핑 작성 요청
+        today = datetime.now().strftime("%Y년 %m월 %d일")
         system_prompt = self._load_prompt(
-            "research_agent.md", category=category.value
+            "research_agent.md", category=category.value, today=today
         )
 
         search_context = "\n".join(
@@ -136,12 +140,17 @@ class ResearchAgent(BaseAgent):
             system_prompt, user_message, ResearchBriefOutput
         )
 
+        # 미래 날짜 사후 검증 및 제거
+        brief_output.key_facts = self._sanitize_future_dates(brief_output.key_facts)
+        brief_output.data_points = self._sanitize_future_dates(brief_output.data_points)
+        brief_output.expert_opinions = self._sanitize_future_dates(brief_output.expert_opinions)
+
         # ResearchBrief 조립
         brief = ResearchBrief(
             category=category,
             topic=topic,
             sources=sources,
-            background_context=brief_output.background_context,
+            background_context=self._remove_future_dates_from_text(brief_output.background_context),
             key_facts=brief_output.key_facts,
             legal_references=brief_output.legal_references,
             expert_opinions=brief_output.expert_opinions,
@@ -248,6 +257,48 @@ class ResearchAgent(BaseAgent):
         parts.append(f"\n총 수집 자료: {total}건")
 
         return "\n".join(parts)
+
+    @staticmethod
+    def _sanitize_future_dates(items: list[str]) -> list[str]:
+        """리스트의 각 항목에서 미래 날짜를 제거한다."""
+        today = datetime.now()
+        sanitized = []
+        for item in items:
+            sanitized.append(ResearchAgent._remove_future_dates_from_text(item))
+        return sanitized
+
+    @staticmethod
+    def _remove_future_dates_from_text(text: str) -> str:
+        """텍스트에서 미래 날짜를 매체명만 남기고 제거한다.
+
+        예: "(한국경제, 2026.2.23)" → "(한국경제)"
+            "(2026.2.23)" → ""
+        """
+        today = datetime.now()
+
+        def check_and_replace(match):
+            full = match.group(0)
+            year = int(match.group("year"))
+            month = int(match.group("month"))
+            day = int(match.group("day"))
+            try:
+                date = datetime(year, month, day)
+                if date.date() > today.date():
+                    # 미래 날짜 → 날짜 부분만 제거
+                    # 앞에 매체명이 있으면 매체명만 남기기
+                    prefix = match.group("prefix")
+                    if prefix:
+                        return f"({prefix.rstrip(', ')})"
+                    return ""
+            except ValueError:
+                pass
+            return full
+
+        # 패턴: (매체명, YYYY.M.DD) 또는 (YYYY.M.DD)
+        pattern = re.compile(
+            r"\((?P<prefix>[^()]*?,\s*)?(?P<year>20\d{2})\.(?P<month>\d{1,2})\.(?P<day>\d{1,2})\)"
+        )
+        return pattern.sub(check_and_replace, text)
 
     def cleanup(self):
         """리소스 정리."""
