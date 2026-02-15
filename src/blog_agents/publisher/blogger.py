@@ -1,7 +1,9 @@
 """Google Blogger API를 통한 글 발행."""
 from __future__ import annotations
 
+import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -197,17 +199,17 @@ class BloggerPublisher:
 
         md_content = path.read_text(encoding="utf-8")
 
-        # frontmatter에서 제목, 키워드 추출
+        # frontmatter에서 제목, 키워드, meta_description 추출
         title = self._extract_frontmatter_field(md_content, "title")
         if not title:
-            # frontmatter가 없으면 첫 번째 h1에서 추출
             h1_match = re.search(r"^#\s+(.+)$", md_content, re.MULTILINE)
             title = h1_match.group(1) if h1_match else path.stem
+
+        meta_description = self._extract_frontmatter_field(md_content, "meta_description") or ""
 
         if labels is None:
             kw_str = self._extract_frontmatter_field(md_content, "keywords")
             if kw_str:
-                # ["키워드1", "키워드2"] 형태 파싱
                 labels = [
                     k.strip().strip('"').strip("'")
                     for k in kw_str.strip("[]").split(",")
@@ -215,7 +217,11 @@ class BloggerPublisher:
 
         # 마크다운 → HTML → 인라인 CSS 래핑
         html_content = markdown_to_html(md_content)
-        styled_content = self._wrap_with_style(html_content)
+
+        # Schema.org JSON-LD 구조화 데이터 생성
+        json_ld = self._build_json_ld(title, meta_description, labels or [])
+
+        styled_content = self._wrap_with_style(html_content, json_ld)
 
         return self.publish_html(
             title=title,
@@ -259,9 +265,44 @@ class BloggerPublisher:
         return response
 
     @staticmethod
-    def _wrap_with_style(html_content: str) -> str:
-        """HTML 콘텐츠를 전문 스타일 CSS와 함께 래핑한다."""
-        return f'{POST_INLINE_CSS}\n<div class="econlaw-post">\n{html_content}\n</div>'
+    def _wrap_with_style(html_content: str, json_ld: str = "") -> str:
+        """HTML 콘텐츠를 전문 스타일 CSS + 구조화 데이터와 함께 래핑한다."""
+        parts = [POST_INLINE_CSS]
+        if json_ld:
+            parts.append(json_ld)
+        parts.append(f'<div class="econlaw-post">\n{html_content}\n</div>')
+        return "\n".join(parts)
+
+    @staticmethod
+    def _build_json_ld(title: str, description: str, labels: list[str]) -> str:
+        """Google 검색 최적화를 위한 Schema.org JSON-LD 생성."""
+        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+09:00")
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": title,
+            "description": description[:160] if description else title,
+            "author": {
+                "@type": "Organization",
+                "name": "이코노로",
+                "url": "https://econlaw-lab.blogspot.com",
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": "이코노로: 법과 숫자, 그 사이 이야기",
+            },
+            "datePublished": now,
+            "dateModified": now,
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": "https://econlaw-lab.blogspot.com",
+            },
+            "keywords": ", ".join(labels) if labels else "",
+            "inLanguage": "ko-KR",
+            "articleSection": labels[0] if labels else "경제",
+        }
+        json_str = json.dumps(schema, ensure_ascii=False, indent=2)
+        return f'<script type="application/ld+json">\n{json_str}\n</script>'
 
     def update_post(self, post_id: str, html_content: str, title: str | None = None) -> dict:
         """기존 글의 내용을 업데이트한다."""

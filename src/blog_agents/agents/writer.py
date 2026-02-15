@@ -167,10 +167,8 @@ class WriterAgent(BaseAgent):
         word_count = len(markdown.replace(" ", "").replace("\n", ""))
         read_time = max(1, round(word_count / 400))
 
-        # 간단한 메타데이터 생성
-        meta_desc = (
-            f"{title} - {brief.topic.angle}"[:155]
-        )
+        # 본문 첫 문단에서 meta description 추출 (Google 검색 결과 미리보기)
+        meta_desc = self._extract_first_paragraph(markdown, title, brief)
 
         return DraftMetadata(
             title=title,
@@ -178,3 +176,34 @@ class WriterAgent(BaseAgent):
             keywords=brief.topic.target_keywords,
             estimated_read_time_minutes=read_time,
         )
+
+    @staticmethod
+    def _extract_first_paragraph(markdown: str, title: str, brief) -> str:
+        """본문 첫 문단을 meta description으로 추출 (155자 이내)."""
+        lines = markdown.split("\n")
+        paragraphs = []
+        for line in lines:
+            stripped = line.strip()
+            # 헤딩, 빈줄, 마크다운 기호 건너뛰기
+            if not stripped or stripped.startswith("#") or stripped.startswith("-") or stripped.startswith(">"):
+                continue
+            # 마크다운 서식 제거
+            clean = stripped.replace("**", "").replace("*", "").replace("`", "")
+            if len(clean) > 20:
+                paragraphs.append(clean)
+                if len(paragraphs) >= 2:
+                    break
+
+        if paragraphs:
+            desc = " ".join(paragraphs)
+            # 155자로 자르되 문장 단위로
+            if len(desc) > 155:
+                cut = desc[:155]
+                last_period = max(cut.rfind("."), cut.rfind("다."), cut.rfind("니다."))
+                if last_period > 80:
+                    desc = cut[:last_period + 1]
+                else:
+                    desc = cut.rsplit(" ", 1)[0] + "..."
+            return desc
+
+        return f"{title} - {brief.topic.angle}"[:155]
