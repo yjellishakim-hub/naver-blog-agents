@@ -239,13 +239,23 @@ class BloggerPublisher:
 
         meta_description = self._extract_frontmatter_field(md_content, "meta_description") or ""
 
+        # 라벨 결정: 전달된 라벨 + frontmatter keywords 병합
+        kw_labels = []
+        kw_str = self._extract_frontmatter_field(md_content, "keywords")
+        if kw_str:
+            kw_labels = [
+                k.strip().strip('"').strip("'")
+                for k in kw_str.strip("[]").split(",")
+                if k.strip()
+            ]
+
         if labels is None:
-            kw_str = self._extract_frontmatter_field(md_content, "keywords")
-            if kw_str:
-                labels = [
-                    k.strip().strip('"').strip("'")
-                    for k in kw_str.strip("[]").split(",")
-                ]
+            labels = kw_labels
+        else:
+            # 기존 라벨에 keywords 추가 (중복 제거)
+            for kw in kw_labels:
+                if kw not in labels:
+                    labels.append(kw)
 
         # 마크다운 → HTML → 인라인 CSS 래핑
         html_content = markdown_to_html(md_content)
@@ -391,11 +401,24 @@ class BloggerPublisher:
 
         return pairs
 
-    def update_post(self, post_id: str, html_content: str, title: str | None = None) -> dict:
-        """기존 글의 내용을 업데이트한다."""
-        body = {"content": html_content}
+    def update_post(
+        self,
+        post_id: str,
+        html_content: str | None = None,
+        title: str | None = None,
+        labels: list[str] | None = None,
+    ) -> dict:
+        """기존 글의 내용/제목/라벨을 업데이트한다."""
+        body = {}
+        if html_content is not None:
+            body["content"] = html_content
         if title:
             body["title"] = title
+        if labels is not None:
+            body["labels"] = labels
+
+        if not body:
+            return {}
 
         console.print(f"  Blogger 글 업데이트 중 (ID: {post_id})...", style="dim")
 

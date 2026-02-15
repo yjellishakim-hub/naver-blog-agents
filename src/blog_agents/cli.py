@@ -313,6 +313,76 @@ def publish(
 
 
 @app.command()
+def fix_labels(
+    project_dir: Optional[str] = typer.Option(
+        None, "--project-dir", "-d",
+    ),
+):
+    """기존 발행 글에 카테고리 라벨을 추가/수정"""
+    config = _get_config(project_dir)
+    blog_id = config.settings.blogger_blog_id
+    if not blog_id:
+        console.print("[red]BLOGGER_BLOG_ID가 설정되지 않았습니다.[/]")
+        raise typer.Exit(1)
+
+    try:
+        from blog_agents.publisher.blogger import BloggerPublisher
+
+        credentials_path = config.root / config.settings.google_credentials_path
+        publisher = BloggerPublisher(credentials_path, blog_id)
+
+        posts = publisher.list_posts(max_results=50)
+        if not posts:
+            console.print("[yellow]발행된 글이 없습니다.[/]")
+            return
+
+        yaml_labels = config._yaml.get("blogger", {}).get("default_labels", {})
+        updated = 0
+
+        for post in posts:
+            post_id = post["id"]
+            title = post.get("title", "")
+            existing_labels = post.get("labels", [])
+
+            # 카테고리 추정 (제목/라벨 기반)
+            new_labels = list(existing_labels)
+            for cat_key, cat_labels in yaml_labels.items():
+                # 이미 카테고리 라벨이 있으면 건너뜀
+                if any(cl in existing_labels for cl in cat_labels):
+                    continue
+                # 파일명이나 제목에서 카테고리 추정은 어려우므로, 라벨이 없는 글에 기본 라벨 추가
+                if not existing_labels:
+                    # 제목 키워드로 카테고리 추정
+                    macro_kw = ["금리", "경제", "GDP", "인플레", "통화", "연준", "한국은행", "금값", "환율"]
+                    realestate_kw = ["부동산", "주택", "세금", "임대", "아파트", "분양", "세법"]
+                    corporate_kw = ["기업", "공정거래", "독점", "M&A", "지배구조", "상법"]
+                    global_kw = ["글로벌", "미국", "중국", "EU", "국제", "무역"]
+
+                    if any(kw in title for kw in macro_kw):
+                        new_labels = yaml_labels.get("macro_finance", [])
+                    elif any(kw in title for kw in realestate_kw):
+                        new_labels = yaml_labels.get("real_estate_tax", [])
+                    elif any(kw in title for kw in corporate_kw):
+                        new_labels = yaml_labels.get("corporate_fair", [])
+                    elif any(kw in title for kw in global_kw):
+                        new_labels = yaml_labels.get("global_news", [])
+                    break
+
+            if new_labels and set(new_labels) != set(existing_labels):
+                publisher.update_post(post_id, labels=new_labels)
+                console.print(f'  [green]라벨 추가:[/] "{title}" → {new_labels}')
+                updated += 1
+            else:
+                console.print(f'  스킵 (이미 라벨 있음): "{title}"', style="dim")
+
+        console.print(f"\n[green]총 {updated}개 글 라벨 업데이트 완료![/]")
+
+    except Exception as e:
+        console.print(f"[red]라벨 수정 실패: {e}[/]")
+        raise typer.Exit(1)
+
+
+@app.command()
 def status(
     project_dir: Optional[str] = typer.Option(
         None, "--project-dir", "-d",
