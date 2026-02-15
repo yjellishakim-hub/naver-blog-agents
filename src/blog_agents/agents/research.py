@@ -120,8 +120,16 @@ class ResearchAgent(BaseAgent):
             f"- 시의성: {topic.timeliness}\n"
             f"- 키워드: {', '.join(topic.target_keywords)}\n\n"
             f"## 수집된 자료\n{search_context}\n\n"
-            f"위 정보를 바탕으로 블로그 작성을 위한 상세 리서치 브리핑을 작성해주세요.\n"
-            f"확인되지 않은 내용은 포함하지 마시고, 출처가 명확한 정보만 사용하십시오."
+            f"위 정보를 바탕으로 블로그 작성을 위한 **완벽한** 리서치 브리핑을 작성해주세요.\n\n"
+            f"**필수 요구사항:**\n"
+            f"- background_context: 3문단 이상 (현재 상황 + 역사적 맥락 + 시의성)\n"
+            f"- key_facts: 최소 7개, 각각 구체적 수치/날짜와 (출처명) 포함\n"
+            f"- data_points: 최소 5개, 각각 정확한 수치 + 전월/전년 대비 변동 + 출처\n"
+            f"- expert_opinions: 최소 3개, 긍정/부정 전망 균형 포함\n"
+            f"- legal_references: 관련 법령 조항 (해당 시)\n"
+            f"- related_topics: 3~5개\n\n"
+            f"작가는 이 브리핑만으로 글을 씁니다. 브리핑에 없는 내용은 쓸 수 없으니 풍부하게 작성하세요.\n"
+            f"수집된 자료에 없는 사실을 지어내지 마십시오."
         )
 
         brief_output = self._call_structured(
@@ -205,7 +213,7 @@ class ResearchAgent(BaseAgent):
 
         if rss_items:
             parts.append("### RSS 피드 (최근 뉴스/보도자료)")
-            for item in rss_items[:20]:
+            for item in rss_items[:30]:
                 date_str = (
                     item.published.strftime("%m/%d") if item.published else "?"
                 )
@@ -213,21 +221,21 @@ class ResearchAgent(BaseAgent):
                     f"- [{date_str}] {item.title} ({item.source})"
                 )
                 if item.summary:
-                    parts.append(f"  요약: {item.summary[:200]}")
+                    parts.append(f"  요약: {item.summary[:500]}")
 
         if scraped_items:
             parts.append("\n### 정부 보도자료")
-            for item in scraped_items[:10]:
+            for item in scraped_items[:15]:
                 parts.append(
                     f"- [{item.date or '?'}] {item.title} ({item.source})"
                 )
 
         if search_results:
             parts.append("\n### 뉴스 검색 결과")
-            for item in search_results[:10]:
+            for item in search_results[:15]:
                 parts.append(f"- {item.title}")
                 if item.snippet:
-                    parts.append(f"  {item.snippet[:200]}")
+                    parts.append(f"  {item.snippet[:500]}")
 
         parts.append(f"\n### 카테고리: {category.display_name}")
         mapping = self.config.sources.get("category_source_mapping", {}).get(
@@ -235,6 +243,9 @@ class ResearchAgent(BaseAgent):
         )
         keywords = mapping.get("news_keywords", [])
         parts.append(f"주요 키워드: {', '.join(keywords)}")
+
+        total = len(rss_items) + len(scraped_items) + len(search_results)
+        parts.append(f"\n총 수집 자료: {total}건")
 
         return "\n".join(parts)
 
