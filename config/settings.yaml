@@ -14,7 +14,7 @@ models:
 # 품질 기준
 quality:
   approval_threshold: 8.5
-  max_revision_rounds: 3
+  max_revision_rounds: 1
   min_word_count: 1500
   max_word_count: 3000
 
