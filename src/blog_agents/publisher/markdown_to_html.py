@@ -12,6 +12,17 @@ def markdown_to_html(md_text: str) -> str:
     # frontmatter 제거
     md_text = re.sub(r"^---\n.*?\n---\n*", "", md_text, flags=re.DOTALL)
 
+    # 목차(TOC) 생성을 위해 H2 헤딩 사전 수집
+    toc_items = []
+    for line in md_text.split("\n"):
+        h2_match = re.match(r"^##\s+(.+)", line.strip())
+        if h2_match:
+            heading_text = h2_match.group(1).strip()
+            # 마크다운 서식 제거
+            clean_text = re.sub(r"\*+", "", heading_text).strip()
+            anchor = re.sub(r"[^\w가-힣]", "-", clean_text).strip("-").lower()
+            toc_items.append((clean_text, anchor))
+
     lines = md_text.split("\n")
     html_lines = []
     in_list = False
@@ -19,6 +30,8 @@ def markdown_to_html(md_text: str) -> str:
     in_sub_list = False
     in_blockquote = False
     in_references = False
+    toc_inserted = False
+    toc_index = 0
 
     for line in lines:
         stripped = line.strip()
@@ -48,7 +61,17 @@ def markdown_to_html(md_text: str) -> str:
             # H1은 제목이므로 생략 (Blogger가 자동 생성)
             if level == 1:
                 continue
-            html_lines.append(f"<h{level}>{text}</h{level}>")
+            # 첫 번째 H2 직전에 목차 삽입
+            if level == 2 and not toc_inserted and len(toc_items) >= 3:
+                html_lines.append(_build_toc(toc_items))
+                toc_inserted = True
+            # H2에 앵커 ID 추가 (목차 링크용)
+            if level == 2 and toc_index < len(toc_items):
+                anchor = toc_items[toc_index][1]
+                html_lines.append(f'<h{level} id="{anchor}">{text}</h{level}>')
+                toc_index += 1
+            else:
+                html_lines.append(f"<h{level}>{text}</h{level}>")
             continue
 
         # 수평선
@@ -154,6 +177,20 @@ def markdown_to_html(md_text: str) -> str:
         html_lines.append("</ul></div>")
 
     return "\n".join(html_lines)
+
+
+def _build_toc(items: list[tuple[str, str]]) -> str:
+    """H2 헤딩 목록으로부터 목차 HTML을 생성한다."""
+    toc_lines = [
+        '<nav class="toc">',
+        "<h4>목차</h4>",
+        "<ol>",
+    ]
+    for text, anchor in items:
+        toc_lines.append(f'  <li><a href="#{anchor}">{text}</a></li>')
+    toc_lines.append("</ol>")
+    toc_lines.append("</nav>")
+    return "\n".join(toc_lines)
 
 
 def _inline_format(text: str) -> str:

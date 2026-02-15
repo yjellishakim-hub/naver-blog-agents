@@ -55,15 +55,23 @@ Blogger → 테마 → **HTML 편집** → `<head>` 섹션에 아래 추가:
 
 ```html
 <!-- Open Graph / 소셜 미디어 미리보기 -->
-<meta property='og:type' content='website'/>
+<meta property='og:type' content='article'/>
 <meta property='og:title' expr:content='data:blog.pageTitle'/>
 <meta property='og:description' expr:content='data:blog.metaDescription'/>
 <meta property='og:url' expr:content='data:blog.canonicalUrl'/>
 <meta property='og:site_name' content='이코노로: 법과 숫자, 그 사이 이야기'/>
 <meta property='og:locale' content='ko_KR'/>
 
+<!-- OG 이미지: 글에 이미지가 있으면 첫 이미지, 없으면 기본 이미지 -->
+<b:if cond='data:blog.postImageUrl'>
+  <meta property='og:image' expr:content='data:blog.postImageUrl'/>
+</b:if>
+<b:if cond='not data:blog.postImageUrl'>
+  <meta property='og:image' content='https://img.shields.io/badge/이코노로-경제법률분석-D35400?style=for-the-badge&amp;labelColor=2D2320'/>
+</b:if>
+
 <!-- Twitter Card -->
-<meta name='twitter:card' content='summary'/>
+<meta name='twitter:card' content='summary_large_image'/>
 <meta name='twitter:title' expr:content='data:blog.pageTitle'/>
 <meta name='twitter:description' expr:content='data:blog.metaDescription'/>
 ```

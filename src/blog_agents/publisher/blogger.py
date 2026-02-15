@@ -161,6 +161,38 @@ POST_INLINE_CSS = """
   color: #8B7355;
   line-height: 1.6;
 }
+.econlaw-post .toc {
+  margin: 24px 0 36px;
+  padding: 20px 28px;
+  background: #FAF6F1;
+  border: 1px solid #E5D9CC;
+  border-radius: 8px;
+}
+.econlaw-post .toc h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2D2320;
+  margin: 0 0 12px;
+  border: none;
+  padding: 0;
+}
+.econlaw-post .toc ol {
+  margin: 0;
+  padding-left: 20px;
+}
+.econlaw-post .toc li {
+  margin-bottom: 6px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.econlaw-post .toc a {
+  color: #4A3F38;
+  border-bottom: none;
+}
+.econlaw-post .toc a:hover {
+  color: #D35400;
+  border-bottom: 1px solid #D35400;
+}
 .econlaw-post a { color: #2D2320; text-decoration: none; border-bottom: 1px solid #D35400; }
 .econlaw-post a:hover { color: #D35400; }
 
@@ -218,8 +250,8 @@ class BloggerPublisher:
         # 마크다운 → HTML → 인라인 CSS 래핑
         html_content = markdown_to_html(md_content)
 
-        # Schema.org JSON-LD 구조화 데이터 생성
-        json_ld = self._build_json_ld(title, meta_description, labels or [])
+        # Schema.org JSON-LD 구조화 데이터 생성 (FAQ 포함)
+        json_ld = self._build_json_ld(title, meta_description, labels or [], html_content)
 
         styled_content = self._wrap_with_style(html_content, json_ld)
 
@@ -274,10 +306,13 @@ class BloggerPublisher:
         return "\n".join(parts)
 
     @staticmethod
-    def _build_json_ld(title: str, description: str, labels: list[str]) -> str:
-        """Google 검색 최적화를 위한 Schema.org JSON-LD 생성."""
+    def _build_json_ld(title: str, description: str, labels: list[str], html_content: str = "") -> str:
+        """Google 검색 최적화를 위한 Schema.org JSON-LD 생성 (Article + FAQPage)."""
         now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+09:00")
-        schema = {
+        schemas = []
+
+        # 1) Article 스키마
+        article = {
             "@context": "https://schema.org",
             "@type": "Article",
             "headline": title,
@@ -301,8 +336,60 @@ class BloggerPublisher:
             "inLanguage": "ko-KR",
             "articleSection": labels[0] if labels else "경제",
         }
-        json_str = json.dumps(schema, ensure_ascii=False, indent=2)
-        return f'<script type="application/ld+json">\n{json_str}\n</script>'
+        schemas.append(article)
+
+        # 2) FAQPage 스키마 (FAQ 섹션이 있는 경우)
+        faq_pairs = BloggerPublisher._extract_faq_from_html(html_content)
+        if faq_pairs:
+            faq_schema = {
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": q,
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": a,
+                        },
+                    }
+                    for q, a in faq_pairs
+                ],
+            }
+            schemas.append(faq_schema)
+
+        parts = []
+        for schema in schemas:
+            json_str = json.dumps(schema, ensure_ascii=False, indent=2)
+            parts.append(f'<script type="application/ld+json">\n{json_str}\n</script>')
+        return "\n".join(parts)
+
+    @staticmethod
+    def _extract_faq_from_html(html_content: str) -> list[tuple[str, str]]:
+        """HTML에서 FAQ 질문-답변 쌍을 추출한다."""
+        if not html_content:
+            return []
+
+        pairs = []
+        # H3 태그에서 Q. 로 시작하는 질문과 그 뒤의 <p> 답변 추출
+        pattern = re.compile(
+            r"<h3>(?:Q\.\s*)?(.+?)</h3>\s*<p>(.*?)</p>",
+            re.DOTALL,
+        )
+        # FAQ 섹션 영역만 추출
+        faq_section = re.search(
+            r"자주 묻는 질문.*?(?=<div class=\"disclaimer\"|<div class=\"references\"|<hr|$)",
+            html_content,
+            re.DOTALL,
+        )
+        if faq_section:
+            for match in pattern.finditer(faq_section.group()):
+                question = re.sub(r"<[^>]+>", "", match.group(1)).strip()
+                answer = re.sub(r"<[^>]+>", "", match.group(2)).strip()
+                if question and answer:
+                    pairs.append((question, answer))
+
+        return pairs
 
     def update_post(self, post_id: str, html_content: str, title: str | None = None) -> dict:
         """기존 글의 내용을 업데이트한다."""
