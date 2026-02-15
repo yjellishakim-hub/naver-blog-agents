@@ -251,23 +251,16 @@ class BloggerPublisher:
 
         meta_description = self._extract_frontmatter_field(md_content, "meta_description") or ""
 
-        # 라벨 결정: 전달된 라벨 + frontmatter keywords 병합
-        kw_labels = []
-        kw_str = self._extract_frontmatter_field(md_content, "keywords")
-        if kw_str:
-            kw_labels = [
-                k.strip().strip('"').strip("'")
-                for k in kw_str.strip("[]").split(",")
-                if k.strip()
-            ]
-
+        # 라벨 결정: 전달된 카테고리 라벨만 사용 (keywords는 SEO용 메타데이터로만 활용)
         if labels is None:
-            labels = kw_labels
-        else:
-            # 기존 라벨에 keywords 추가 (중복 제거)
-            for kw in kw_labels:
-                if kw not in labels:
-                    labels.append(kw)
+            # 라벨 미전달 시 frontmatter keywords를 fallback으로 사용
+            kw_str = self._extract_frontmatter_field(md_content, "keywords")
+            if kw_str:
+                labels = [
+                    k.strip().strip('"').strip("'")
+                    for k in kw_str.strip("[]").split(",")
+                    if k.strip()
+                ]
 
         # 마크다운 → HTML → 인라인 CSS 래핑
         html_content = markdown_to_html(md_content)
