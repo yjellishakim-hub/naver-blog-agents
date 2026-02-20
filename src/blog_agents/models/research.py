@@ -89,6 +89,10 @@ class ResearchBrief(BaseModel):
     related_topics: list[str] = Field(
         default_factory=list, description="관련 주제 (내부 링킹용)"
     )
+    raw_source_snippets: str = Field(
+        default="",
+        description="원본 검색 결과 스니펫 (편집장 팩트체크용)",
+    )
 
 
 class ResearchBriefOutput(BaseModel):

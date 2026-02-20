@@ -6,6 +6,7 @@ from uuid import uuid4
 from rich.console import Console
 
 from blog_agents.agents.base import BaseAgent
+from blog_agents.agents.research import ResearchAgent
 from blog_agents.models.content import Draft, DraftMetadata
 from blog_agents.models.research import ContentCategory, ResearchBrief
 from blog_agents.models.review import EditReview
@@ -149,6 +150,20 @@ class WriterAgent(BaseAgent):
                 parts.append("강점:")
                 for s in review.strengths:
                     parts.append(f"  - {s}")
+
+        # 고유명사 앵커 목록 (브리핑에서 추출)
+        all_brief_text = "\n".join(
+            [brief.background_context]
+            + brief.key_facts
+            + brief.exhibition_info
+            + brief.artist_info
+            + brief.artwork_highlights
+        )
+        proper_nouns = ResearchAgent.extract_proper_nouns(all_brief_text)
+        if proper_nouns:
+            parts.append("\n## 고유명사 목록 (반드시 이 표기 그대로 사용)")
+            for noun in sorted(proper_nouns):
+                parts.append(f"- {noun}")
 
         parts.append(
             "\n---\n"

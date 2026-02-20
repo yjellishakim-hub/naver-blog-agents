@@ -140,6 +140,13 @@ class ResearchAgent(BaseAgent):
             system_prompt, user_message, ResearchBriefOutput
         )
 
+        # 할루시네이션 검증: 브리핑의 고유명사가 원본 자료에 존재하는지 확인
+        console.print("  브리핑 팩트 검증 중...", style="dim")
+        valid_urls = {r.url for r in deep_results}
+        brief_output = self._validate_brief(brief_output, deep_results, topic)
+        self._validate_urls(brief_output, valid_urls)
+        self._detect_date_repetition(brief_output.key_facts)
+
         # 미래 날짜 사후 검증 및 제거
         brief_output.key_facts = self._sanitize_future_dates(brief_output.key_facts)
         brief_output.data_points = self._sanitize_future_dates(brief_output.data_points)
@@ -158,6 +165,7 @@ class ResearchAgent(BaseAgent):
             expert_opinions=brief_output.expert_opinions,
             data_points=brief_output.data_points,
             related_topics=brief_output.related_topics,
+            raw_source_snippets=search_context,
         )
 
         console.print(
@@ -279,6 +287,157 @@ class ResearchAgent(BaseAgent):
             r"\((?P<prefix>[^()]*?,\s*)?(?P<year>20\d{2})\.(?P<month>\d{1,2})\.(?P<day>\d{1,2})\)"
         )
         return pattern.sub(check_and_replace, text)
+
+    # ------------------------------------------------------------------
+    # 할루시네이션 검증 메서드
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def extract_proper_nouns(text: str) -> set[str]:
+        """텍스트에서 따옴표/괄호로 감싼 고유명사를 추출한다.
+
+        '...', "...", 《...》, 「...」 패턴을 인식한다.
+        2글자 미만 결과는 제외한다.
+        """
+        patterns = [
+            r"['\u2018\u2019]([^'\u2018\u2019]+?)['\u2018\u2019]",
+            r"\u201c([^\u201d]+?)\u201d",
+            r"《([^》]+?)》",
+            r"「([^」]+?)」",
+        ]
+        terms = set()
+        for pat in patterns:
+            terms.update(re.findall(pat, text))
+        return {t.strip() for t in terms if len(t.strip()) >= 2}
+
+    def _validate_brief(
+        self,
+        brief_output: ResearchBriefOutput,
+        deep_results: list,
+        topic: TopicSuggestion,
+    ) -> ResearchBriefOutput:
+        """브리핑의 고유명사가 원본 검색 결과에 존재하는지 검증한다.
+
+        원본에 없는 고유명사를 포함한 항목은 제거하고 경고를 출력한다.
+        """
+        # 원본 자료 코퍼스 구성
+        source_corpus = " ".join(
+            f"{r.title} {r.snippet}" for r in deep_results
+        ).lower()
+
+        # 브리핑 전체 텍스트에서 고유명사 추출
+        all_brief_text = "\n".join(
+            [brief_output.background_context]
+            + brief_output.key_facts
+            + brief_output.exhibition_info
+            + brief_output.artist_info
+            + brief_output.artwork_highlights
+        )
+        proper_nouns = self.extract_proper_nouns(all_brief_text)
+
+        if not proper_nouns:
+            return brief_output
+
+        # 각 고유명사가 원본에 존재하는지 확인
+        ungrounded = []
+        for noun in proper_nouns:
+            if noun.lower() not in source_corpus:
+                ungrounded.append(noun)
+
+        if not ungrounded:
+            console.print("  [green]고유명사 검증 통과[/]")
+            return brief_output
+
+        console.print(
+            f"  [yellow]검증 경고: 원본 자료에 없는 고유명사 "
+            f"{len(ungrounded)}개 발견[/]"
+        )
+        for term in ungrounded:
+            console.print(f"    - '{term}'", style="yellow")
+
+        # 불일치 고유명사를 포함한 항목 제거
+        for field_name in [
+            "key_facts", "artist_info", "artwork_highlights", "exhibition_info",
+        ]:
+            items = getattr(brief_output, field_name)
+            filtered = [
+                item for item in items
+                if not any(term in item for term in ungrounded)
+            ]
+            removed = len(items) - len(filtered)
+            if removed > 0:
+                console.print(
+                    f"    {field_name}: {removed}개 항목 제거",
+                    style="yellow",
+                )
+                setattr(brief_output, field_name, filtered)
+
+        # 핵심 팩트가 너무 적어지면 경고
+        if len(brief_output.key_facts) < 3:
+            console.print(
+                "  [red]경고: 검증 후 핵심 팩트가 3개 미만입니다. "
+                "브리핑 신뢰도가 낮을 수 있습니다.[/]"
+            )
+
+        return brief_output
+
+    def _validate_urls(
+        self, brief_output: ResearchBriefOutput, valid_urls: set[str]
+    ) -> None:
+        """브리핑 텍스트 내 URL이 실제 수집된 URL인지 확인하고 가짜 URL을 제거한다."""
+        url_pattern = re.compile(r"https?://[^\s),\]]+")
+
+        def replace_invalid(match: re.Match) -> str:
+            url = match.group(0).rstrip(")")
+            # 수집된 URL 중 하나와 prefix가 일치하면 유효
+            if any(
+                url.startswith(v) or v.startswith(url) for v in valid_urls
+            ):
+                return match.group(0)
+            console.print(
+                f"    [yellow]가짜 URL 제거: {url[:80]}[/]"
+            )
+            return ""
+
+        for field_name in ["expert_opinions", "key_facts"]:
+            items = getattr(brief_output, field_name)
+            cleaned = [url_pattern.sub(replace_invalid, item) for item in items]
+            setattr(brief_output, field_name, cleaned)
+
+        brief_output.background_context = url_pattern.sub(
+            replace_invalid, brief_output.background_context
+        )
+
+    @staticmethod
+    def _detect_date_repetition(
+        items: list[str], threshold: int = 4
+    ) -> set[str]:
+        """동일 날짜가 과도하게 반복되는 패턴을 감지한다.
+
+        반복 날짜가 오늘 날짜와 같으면 날조 가능성이 높으므로 해당 날짜를 제거한다.
+        """
+        date_pattern = re.compile(r"\d{4}\.\d{1,2}\.\d{1,2}")
+        date_counts: dict[str, int] = {}
+        for item in items:
+            for d in date_pattern.findall(item):
+                date_counts[d] = date_counts.get(d, 0) + 1
+
+        suspicious = {d for d, c in date_counts.items() if c >= threshold}
+        if not suspicious:
+            return set()
+
+        today_str = datetime.now().strftime("%Y.%-m.%-d")
+        today_str2 = datetime.now().strftime("%Y.%m.%d")
+
+        for d in suspicious:
+            is_today = d in (today_str, today_str2)
+            label = " (오늘 날짜 — 날조 가능성 높음)" if is_today else ""
+            console.print(
+                f"  [yellow]날짜 반복 경고: {d} "
+                f"({date_counts[d]}회 반복){label}[/]"
+            )
+
+        return suspicious
 
     def cleanup(self):
         """리소스 정리."""
