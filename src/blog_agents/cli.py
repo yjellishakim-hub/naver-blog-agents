@@ -14,21 +14,28 @@ from blog_agents.orchestrator import BlogOrchestrator
 
 app = typer.Typer(
     name="blog-agents",
-    help="한국 경제·법률 블로그 멀티 에이전트 자동화 시스템",
+    help="한국 미술 전시 블로그 멀티 에이전트 자동화 시스템",
     no_args_is_help=True,
 )
 console = Console()
 
 CATEGORY_MAP = {
-    "macro": ContentCategory.MACRO_FINANCE,
-    "macro_finance": ContentCategory.MACRO_FINANCE,
-    "realestate": ContentCategory.REAL_ESTATE_TAX,
-    "real_estate_tax": ContentCategory.REAL_ESTATE_TAX,
-    "corporate": ContentCategory.CORPORATE_FAIR,
-    "corporate_fair": ContentCategory.CORPORATE_FAIR,
-    "global": ContentCategory.GLOBAL_NEWS,
-    "global_news": ContentCategory.GLOBAL_NEWS,
-    "news": ContentCategory.GLOBAL_NEWS,
+    "seoul": ContentCategory.SEOUL_EXHIBITION,
+    "seoul_exhibition": ContentCategory.SEOUL_EXHIBITION,
+    "서울전시": ContentCategory.SEOUL_EXHIBITION,
+    "서울": ContentCategory.SEOUL_EXHIBITION,
+    "gwangju": ContentCategory.GWANGJU_CULTURE,
+    "gwangju_culture": ContentCategory.GWANGJU_CULTURE,
+    "광주": ContentCategory.GWANGJU_CULTURE,
+    "광주문화": ContentCategory.GWANGJU_CULTURE,
+    "film": ContentCategory.FILM_REVIEW,
+    "film_review": ContentCategory.FILM_REVIEW,
+    "영화": ContentCategory.FILM_REVIEW,
+    "영화리뷰": ContentCategory.FILM_REVIEW,
+    "weekly": ContentCategory.WEEKLY_PICK,
+    "weekly_pick": ContentCategory.WEEKLY_PICK,
+    "주간": ContentCategory.WEEKLY_PICK,
+    "추천": ContentCategory.WEEKLY_PICK,
 }
 
 
@@ -39,7 +46,7 @@ def _resolve_category(category: str) -> ContentCategory:
         return CATEGORY_MAP[key]
     raise typer.BadParameter(
         f"알 수 없는 카테고리: '{category}'. "
-        f"사용 가능: macro, realestate, corporate, global"
+        f"사용 가능: museum, gallery, artfair, special"
     )
 
 
@@ -53,7 +60,7 @@ def _get_config(project_dir: Optional[str] = None) -> AppConfig:
 def generate(
     category: Optional[str] = typer.Argument(
         None,
-        help="콘텐츠 카테고리 (macro, realestate, corporate, global). 미지정 시 자동 로테이션",
+        help="콘텐츠 카테고리 (museum, gallery, artfair, special). 미지정 시 자동 로테이션",
     ),
     auto: bool = typer.Option(
         False, "--auto", "-a",
@@ -61,11 +68,11 @@ def generate(
     ),
     publish_flag: bool = typer.Option(
         False, "--publish", "-p",
-        help="생성 후 Blogger에 자동 발행",
+        help="생성 후 네이버 블로그에 자동 발행",
     ),
     draft: bool = typer.Option(
         False, "--draft",
-        help="Blogger에 초안으로 발행 (--publish와 함께 사용)",
+        help="임시저장으로 발행 (--publish와 함께 사용)",
     ),
     project_dir: Optional[str] = typer.Option(
         None, "--project-dir", "-d",
@@ -91,11 +98,11 @@ def generate(
 
     publish_mode = ""
     if publish_flag:
-        publish_mode = f"\n발행: {'초안(draft)' if draft else '즉시 공개'}"
+        publish_mode = f"\n발행: 네이버 블로그 ({'임시저장' if draft else '즉시 공개'})"
 
     console.print(
         Panel(
-            f"[bold]경제·법률 블로그 에이전트[/]\n"
+            f"[bold]미술 전시 블로그 에이전트[/]\n"
             f"카테고리: {cat.display_name}\n"
             f"모드: {'자동' if auto else '수동 (토픽 선택)'}{publish_mode}",
             title="blog-agents generate",
@@ -109,9 +116,8 @@ def generate(
         if result:
             console.print("\n[bold green]블로그 포스트 생성 완료![/]")
 
-            # Blogger 발행
             if publish_flag:
-                _auto_publish(config, cat, result, is_draft=draft)
+                _auto_publish_naver(config, cat, result, is_draft=draft)
         else:
             console.print("\n[yellow]포스트를 생성하지 못했습니다.[/]")
     except KeyboardInterrupt:
@@ -120,21 +126,17 @@ def generate(
         orchestrator.cleanup()
 
 
-def _auto_publish(config: AppConfig, category, blog_post, is_draft: bool = False):
-    """생성된 글을 Blogger에 자동 발행."""
-    blog_id = config.settings.blogger_blog_id
-    if not blog_id:
-        console.print("[yellow]BLOGGER_BLOG_ID 미설정 → Blogger 발행 건너뜀[/]")
+def _auto_publish_naver(config: AppConfig, category, blog_post, is_draft: bool = False):
+    """생성된 글을 네이버 블로그에 자동 발행."""
+    naver_id = config.settings.naver_blog_id
+    if not naver_id:
+        console.print("[yellow]NAVER_BLOG_ID 미설정 → 네이버 발행 건너뜀[/]")
         return
 
     try:
-        from blog_agents.publisher.blogger import BloggerPublisher
+        from blog_agents.publisher.naver import run_naver_publish
         from blog_agents.utils.storage import StorageManager
 
-        credentials_path = config.root / config.settings.google_credentials_path
-        publisher = BloggerPublisher(credentials_path, blog_id)
-
-        # 해당 카테고리의 최신 published 파일 찾기
         storage = StorageManager(config.output_dir)
         cat_value = category.value if hasattr(category, 'value') else str(category)
         published_files = storage.list_files("published", f"*{cat_value}*.md")
@@ -142,19 +144,17 @@ def _auto_publish(config: AppConfig, category, blog_post, is_draft: bool = False
             console.print("[yellow]발행할 파일을 찾을 수 없습니다.[/]")
             return
 
-        md_path = published_files[0]  # 해당 카테고리의 가장 최신 파일
+        md_path = published_files[0]
+        tags = [category.display_name]
 
-        # 카테고리 display_name을 단일 라벨로 사용
-        labels = [category.display_name]
-
-        result = publisher.publish_markdown_file(
-            md_path, labels=labels, is_draft=is_draft
+        result = run_naver_publish(
+            naver_id, md_path, tags=tags, is_draft=is_draft,
         )
 
-        status = "초안" if is_draft else "공개"
+        status = "임시저장" if is_draft else "공개"
         console.print(
             Panel(
-                f"[bold green]Blogger {status} 완료![/]\n\n"
+                f"[bold green]네이버 블로그 {status} 완료![/]\n\n"
                 f"제목: {result.get('title', 'N/A')}\n"
                 f"URL: {result.get('url', 'N/A')}\n"
                 f"상태: {status}",
@@ -162,16 +162,19 @@ def _auto_publish(config: AppConfig, category, blog_post, is_draft: bool = False
             )
         )
     except ImportError:
-        console.print("[yellow]Blogger 의존성 미설치 → 발행 건너뜀[/]")
+        console.print(
+            "[yellow]네이버 발행 의존성 미설치 → 발행 건너뜀[/]\n"
+            "실행: pip install blog-agents[naver] && playwright install chromium"
+        )
     except Exception as e:
-        console.print(f"[red]Blogger 발행 실패: {e}[/]")
+        console.print(f"[red]네이버 발행 실패: {e}[/]")
 
 
 @app.command()
 def research(
     category: str = typer.Argument(
         ...,
-        help="콘텐츠 카테고리 (macro, realestate, corporate)",
+        help="콘텐츠 카테고리 (museum, gallery, artfair, special)",
     ),
     project_dir: Optional[str] = typer.Option(
         None, "--project-dir", "-d",
@@ -218,26 +221,14 @@ def publish(
     ),
     draft: bool = typer.Option(
         False, "--draft",
-        help="초안으로 발행 (바로 공개하지 않음)",
+        help="임시저장으로 발행 (바로 공개하지 않음)",
     ),
     project_dir: Optional[str] = typer.Option(
         None, "--project-dir", "-d",
     ),
 ):
-    """생성된 글을 Google Blogger에 발행"""
+    """생성된 글을 네이버 블로그에 발행"""
     config = _get_config(project_dir)
-
-    # Blog ID 확인
-    blog_id = config.settings.blogger_blog_id
-    if not blog_id:
-        console.print(
-            "[red]BLOGGER_BLOG_ID가 설정되지 않았습니다.[/]\n\n"
-            "1. Blogger(blogger.com)에서 블로그를 생성하세요\n"
-            "2. 블로그 대시보드 URL에서 blogID를 복사하세요\n"
-            "   예: blogger.com/blog/posts/1234567890\n"
-            "3. .env 파일에 추가: BLOGGER_BLOG_ID=1234567890"
-        )
-        raise typer.Exit(1)
 
     # 발행할 파일 결정
     if file:
@@ -250,7 +241,6 @@ def publish(
             console.print("[yellow]발행할 글이 없습니다. 먼저 generate를 실행하세요.[/]")
             raise typer.Exit(1)
 
-        # 최신 파일 표시
         console.print("[bold]발행 가능한 글:[/]\n")
         for i, p in enumerate(published[:5], 1):
             console.print(f"  [cyan]{i}.[/] {p.name}")
@@ -266,47 +256,57 @@ def publish(
         console.print(f"[red]파일을 찾을 수 없습니다: {md_path}[/]")
         raise typer.Exit(1)
 
+    _publish_naver(config, md_path, draft)
+
+
+def _publish_naver(config: AppConfig, md_path: Path, draft: bool):
+    """네이버 블로그에 발행."""
+    naver_id = config.settings.naver_blog_id
+    if not naver_id:
+        console.print(
+            "[red]NAVER_BLOG_ID가 설정되지 않았습니다.[/]\n\n"
+            "1. .env 파일에 추가: NAVER_BLOG_ID=<네이버아이디>\n"
+            "2. 최초 실행 시: blog-agents naver-login"
+        )
+        raise typer.Exit(1)
+
     console.print(
         Panel(
-            f"[bold]Blogger 발행[/]\n"
+            f"[bold]네이버 블로그 발행[/]\n"
             f"파일: {md_path.name}\n"
-            f"모드: {'초안' if draft else '즉시 발행'}",
+            f"모드: {'임시저장' if draft else '즉시 발행'}",
             title="blog-agents publish",
-            style="blue",
+            style="green",
         )
     )
 
     try:
-        from blog_agents.publisher.blogger import BloggerPublisher
+        from blog_agents.publisher.naver import run_naver_publish
 
-        credentials_path = config.root / config.settings.google_credentials_path
-        publisher = BloggerPublisher(credentials_path, blog_id)
-
-        # 파일명에서 카테고리를 감지하여 단일 라벨 매핑
-        labels = None
+        tags = None
         for cat in ContentCategory:
             if cat.value in md_path.name:
-                labels = [cat.display_name]
+                tags = [cat.display_name]
                 break
 
-        result = publisher.publish_markdown_file(
-            md_path, labels=labels, is_draft=draft
+        result = run_naver_publish(
+            naver_id, md_path, tags=tags, is_draft=draft,
         )
 
         console.print(
             Panel(
-                f"[bold green]발행 완료![/]\n\n"
+                f"[bold green]네이버 발행 완료![/]\n\n"
                 f"제목: {result.get('title', 'N/A')}\n"
                 f"URL: {result.get('url', 'N/A')}\n"
-                f"상태: {'초안' if draft else '공개'}",
+                f"상태: {'임시저장' if draft else '공개'}",
                 style="green",
             )
         )
 
     except ImportError:
         console.print(
-            "[red]Blogger 의존성이 설치되지 않았습니다.[/]\n"
-            "실행: pip install blog-agents[publisher]"
+            "[red]네이버 발행 의존성이 설치되지 않았습니다.[/]\n"
+            "실행: pip install blog-agents[naver] && playwright install chromium"
         )
         raise typer.Exit(1)
     except FileNotFoundError as e:
@@ -314,71 +314,6 @@ def publish(
         raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]발행 실패: {e}[/]")
-        raise typer.Exit(1)
-
-
-@app.command()
-def fix_labels(
-    project_dir: Optional[str] = typer.Option(
-        None, "--project-dir", "-d",
-    ),
-):
-    """기존 발행 글에 카테고리 라벨을 추가/수정"""
-    config = _get_config(project_dir)
-    blog_id = config.settings.blogger_blog_id
-    if not blog_id:
-        console.print("[red]BLOGGER_BLOG_ID가 설정되지 않았습니다.[/]")
-        raise typer.Exit(1)
-
-    try:
-        from blog_agents.publisher.blogger import BloggerPublisher
-
-        credentials_path = config.root / config.settings.google_credentials_path
-        publisher = BloggerPublisher(credentials_path, blog_id)
-
-        posts = publisher.list_posts(max_results=50)
-        if not posts:
-            console.print("[yellow]발행된 글이 없습니다.[/]")
-            return
-
-        # 4개 카테고리 라벨 매핑 (제목 키워드 기반)
-        CATEGORY_KEYWORDS = {
-            "거시경제·금융정책": ["금리", "경제", "GDP", "인플레", "통화", "연준", "한국은행", "금값", "환율", "물가", "기준금리"],
-            "부동산·세법": ["부동산", "주택", "세금", "임대", "아파트", "분양", "세법", "양도세", "종부세", "취득세"],
-            "기업법·공정거래": ["기업", "공정거래", "독점", "M&A", "지배구조", "상법", "하도급", "ESG"],
-            "글로벌 뉴스": ["글로벌", "국제", "무역", "관세", "지정학"],
-        }
-        valid_labels = set(CATEGORY_KEYWORDS.keys())
-        updated = 0
-
-        for post in posts:
-            post_id = post["id"]
-            title = post.get("title", "")
-            existing_labels = post.get("labels", [])
-
-            # 이미 4개 카테고리 중 하나만 있으면 건너뜀
-            if len(existing_labels) == 1 and existing_labels[0] in valid_labels:
-                console.print(f'  스킵 (정상): "{title}" → {existing_labels}', style="dim")
-                continue
-
-            # 제목 키워드로 카테고리 추정
-            new_label = None
-            for label, keywords in CATEGORY_KEYWORDS.items():
-                if any(kw in title for kw in keywords):
-                    new_label = label
-                    break
-
-            if new_label:
-                publisher.update_post(post_id, labels=[new_label])
-                console.print(f'  [green]라벨 수정:[/] "{title}" → [{new_label}]')
-                updated += 1
-            else:
-                console.print(f'  [yellow]카테고리 추정 불가:[/] "{title}"')
-
-        console.print(f"\n[green]총 {updated}개 글 라벨 업데이트 완료![/]")
-
-    except Exception as e:
-        console.print(f"[red]라벨 수정 실패: {e}[/]")
         raise typer.Exit(1)
 
 
@@ -420,6 +355,61 @@ def status(
     console.print(f"  초안: {len(drafts)}개")
     console.print(f"  리뷰: {len(reviews)}개")
     console.print(f"  발행: {len(published)}개")
+
+
+@app.command()
+def naver_login(
+    project_dir: Optional[str] = typer.Option(
+        None, "--project-dir", "-d",
+    ),
+):
+    """네이버 블로그 로그인 및 세션 저장 (최초 1회)"""
+    config = _get_config(project_dir)
+    naver_id = config.settings.naver_blog_id
+    if not naver_id:
+        console.print(
+            "[red]NAVER_BLOG_ID가 설정되지 않았습니다.[/]\n"
+            ".env 파일에 NAVER_BLOG_ID=<네이버아이디> 를 추가하세요."
+        )
+        raise typer.Exit(1)
+
+    console.print(
+        Panel(
+            f"[bold]네이버 블로그 로그인[/]\n"
+            f"블로그 ID: {naver_id}\n\n"
+            "브라우저가 열리면 네이버 계정으로 로그인해주세요.\n"
+            "로그인 후 세션이 자동 저장되어 이후 발행 시 재로그인이 불필요합니다.",
+            title="blog-agents naver-login",
+            style="green",
+        )
+    )
+
+    try:
+        from blog_agents.publisher.naver import run_naver_login
+
+        success = run_naver_login(naver_id)
+        if success:
+            console.print(
+                Panel(
+                    "[bold green]네이버 로그인 세션 저장 완료![/]\n\n"
+                    "이제 다음 명령어로 네이버 블로그에 발행할 수 있습니다:\n"
+                    "  blog-agents publish\n"
+                    "  blog-agents generate --auto --publish",
+                    style="green",
+                )
+            )
+        else:
+            console.print("[red]네이버 로그인에 실패했습니다. 다시 시도해주세요.[/]")
+            raise typer.Exit(1)
+    except ImportError:
+        console.print(
+            "[red]네이버 발행 의존성이 설치되지 않았습니다.[/]\n"
+            "실행: pip install blog-agents[naver] && playwright install chromium"
+        )
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]로그인 실패: {e}[/]")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

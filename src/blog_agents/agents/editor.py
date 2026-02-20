@@ -15,7 +15,7 @@ console = Console()
 
 
 class EditorAgent(BaseAgent):
-    """초안을 7개 차원에서 평가하고 출처 팩트체크를 수행하는 편집장 에이전트."""
+    """초안을 6개 차원에서 평가하고 출처 팩트체크를 수행하는 편집장 에이전트."""
 
     agent_name = "편집장"
 
@@ -69,10 +69,20 @@ class EditorAgent(BaseAgent):
             for fact in brief.key_facts:
                 parts.append(f"- {fact}")
 
-        if brief.legal_references:
-            parts.append("\n## 관련 법령 (용어·조문 정확성 확인)")
-            for ref in brief.legal_references:
-                parts.append(f"- {ref}")
+        if brief.exhibition_info:
+            parts.append("\n## 전시 기본 정보 (일정·장소·요금 정확성 확인)")
+            for info in brief.exhibition_info:
+                parts.append(f"- {info}")
+
+        if brief.artist_info:
+            parts.append("\n## 작가 정보 (약력·작품세계 정확성 확인)")
+            for info in brief.artist_info:
+                parts.append(f"- {info}")
+
+        if brief.artwork_highlights:
+            parts.append("\n## 주요 작품 (작품명·매체·해석 정확성 확인)")
+            for work in brief.artwork_highlights:
+                parts.append(f"- {work}")
 
         if brief.data_points:
             parts.append("\n## 데이터 (수치 정확성 확인)")
@@ -85,14 +95,14 @@ class EditorAgent(BaseAgent):
 
         parts.append(
             "\n---\n"
-            "위 초안을 7가지 차원(사실정확성, 법률용어, 가독성, SEO, 구조, 독창성, 출처검증)으로 "
+            "위 초안을 6가지 차원(사실정확성, 미술지식, 가독성·문체, SEO, 구성/논리, 비평적깊이)으로 "
             "평가하고 구체적인 피드백을 제공해주세요.\n\n"
-            "**특히 출처 검증을 철저히 수행하세요:**\n"
-            "- 초안 하단의 [참고자료]에 나열된 각 출처를 하나씩 검토\n"
-            "- 각 출처가 본문의 어떤 주장을 뒷받침하는지 매칭\n"
-            "- 존재하지 않는 매체, 의심스러운 출처, 내용과 무관한 출처 식별\n"
-            "- 본문의 핵심 주장 중 출처가 빠진 것이 있는지 확인\n"
-            "- 출처 검증 결과를 source_verification 차원 피드백에 포함"
+            "**특히 다음 사항을 철저히 검증하세요:**\n"
+            "- 전시 일정, 장소, 입장료 등 기본 정보의 정확성\n"
+            "- 작가명, 작품명, 미술 용어의 정확성\n"
+            "- 과거-현재-미래 맥락이 충분히 다뤄졌는지\n"
+            "- 단순 감상평이 아닌 비평적 분석이 있는지\n"
+            "- 출처 검증: 각 출처의 실재성과 본문 주장과의 매칭"
         )
 
         return "\n".join(parts)

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
 import httpx
-from bs4 import BeautifulSoup
 from rich.console import Console
 
 console = Console()
@@ -22,20 +22,56 @@ def _resolve_google_news_url(url: str) -> str:
     try:
         from googlenewsdecoder import new_decoderv1
 
-        result = new_decoderv1(url, interval=1)
+        result = new_decoderv1(url, interval=0)
         if result.get("status"):
             decoded = result["decoded_url"]
-            console.print(f"  [URL] 디코딩: {decoded[:80]}...", style="dim")
             return decoded
     except ImportError:
-        console.print(
-            "  [URL] googlenewsdecoder 미설치 → Google News URL 그대로 사용",
-            style="yellow",
-        )
+        pass
     except Exception:
         pass
 
     return url
+
+
+def _resolve_google_news_urls_batch(urls: list[str], max_workers: int = 10) -> list[str]:
+    """여러 Google News URL을 병렬로 디코딩한다."""
+    results = list(urls)  # 복사
+
+    # Google News URL만 필터
+    indices_to_resolve = [
+        i for i, u in enumerate(urls)
+        if "news.google.com/rss/articles/" in u
+    ]
+
+    if not indices_to_resolve:
+        return results
+
+    console.print(
+        f"  [URL] {len(indices_to_resolve)}개 Google News URL 병렬 디코딩 중...",
+        style="dim",
+    )
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_idx = {
+            executor.submit(_resolve_google_news_url, urls[i]): i
+            for i in indices_to_resolve
+        }
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            try:
+                results[idx] = future.result()
+            except Exception:
+                pass  # 실패 시 원본 URL 유지
+
+    decoded_count = sum(
+        1 for i in indices_to_resolve if results[i] != urls[i]
+    )
+    console.print(
+        f"  [URL] {decoded_count}/{len(indices_to_resolve)}개 디코딩 완료",
+        style="dim",
+    )
+    return results
 
 
 @dataclass
@@ -92,10 +128,13 @@ class WebSearcher:
             import feedparser
 
             feed = feedparser.parse(response.text)
-            for entry in feed.entries[:max_results]:
-                raw_url = entry.get("link", "")
-                actual_url = _resolve_google_news_url(raw_url)
+            entries = feed.entries[:max_results]
 
+            # URL들을 한번에 병렬 디코딩
+            raw_urls = [e.get("link", "") for e in entries]
+            decoded_urls = _resolve_google_news_urls_batch(raw_urls)
+
+            for entry, actual_url in zip(entries, decoded_urls):
                 results.append(
                     SearchResult(
                         title=entry.get("title", "").strip(),

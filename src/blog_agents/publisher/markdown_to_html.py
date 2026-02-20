@@ -1,14 +1,11 @@
-"""마크다운을 Blogger용 HTML로 변환 (경제법률 인사이트 테마 대응)."""
+"""마크다운을 블로그용 HTML로 변환."""
 from __future__ import annotations
 
 import re
 
 
 def markdown_to_html(md_text: str) -> str:
-    """마크다운 텍스트를 Blogger용 HTML로 변환한다.
-
-    경제법률 인사이트 테마의 CSS 클래스에 맞춰 변환한다.
-    """
+    """마크다운 텍스트를 블로그용 HTML로 변환한다."""
     # frontmatter 제거
     md_text = re.sub(r"^---\n.*?\n---\n*", "", md_text, flags=re.DOTALL)
 
@@ -61,7 +58,7 @@ def markdown_to_html(md_text: str) -> str:
         if heading_match:
             level = len(heading_match.group(1))
             text = _inline_format(heading_match.group(2))
-            # H1은 제목이므로 생략 (Blogger가 자동 생성)
+            # H1은 제목이므로 생략 (블로그 에디터가 자동 생성)
             if level == 1:
                 continue
             # 첫 번째 H2 직전에 목차 삽입
@@ -73,10 +70,15 @@ def markdown_to_html(md_text: str) -> str:
             if level == 2 and clean_heading in ("참고자료", "참고 자료", "출처", "References"):
                 in_references = True
                 html_lines.append('<div class="references">')
-                html_lines.append("<h4>참고자료</h4>")
+                html_lines.append('<p class="ref-title">References</p>')
                 html_lines.append("<ul>")
                 continue
-            # H2에 앵커 추가 (목차 링크용, Blogger 호환)
+            # H2 앞에 섹션 구분 장식 삽입 (첫 H2 제외)
+            if level == 2 and toc_inserted:
+                html_lines.append(
+                    '<div class="section-divider">◆</div>'
+                )
+            # H2에 앵커 추가 (목차 링크용)
             if level == 2 and toc_index < len(toc_items):
                 anchor = toc_items[toc_index][1]
                 html_lines.append(f'<a name="{anchor}"></a>')
@@ -86,9 +88,18 @@ def markdown_to_html(md_text: str) -> str:
                 html_lines.append(f"<h{level}>{text}</h{level}>")
             continue
 
+        # 블록 레벨 이미지: ![캡션](경로)
+        img_match = re.match(r"^!\[(.*?)\]\((.*?)\)$", stripped)
+        if img_match:
+            caption = img_match.group(1)
+            path = img_match.group(2)
+            html_lines.append(f"<!-- IMG:{path}|{caption} -->")
+            continue
+
         # 수평선
         if re.match(r"^(-{3,}|\*{3,}|_{3,})$", stripped):
             if in_references:
+                html_lines.append("</ul>")
                 html_lines.append("</div>")
                 in_references = False
             html_lines.append("<hr/>")
@@ -99,7 +110,7 @@ def markdown_to_html(md_text: str) -> str:
         if ref_match:
             in_references = True
             html_lines.append('<div class="references">')
-            html_lines.append("<h4>참고자료</h4>")
+            html_lines.append('<p class="ref-title">References</p>')
             html_lines.append("<ul>")
             continue
 
@@ -108,7 +119,7 @@ def markdown_to_html(md_text: str) -> str:
             ul_match = re.match(r"^[-*+]\s+(.*)", stripped)
             if ul_match:
                 text = _format_reference(ul_match.group(1))
-                html_lines.append(f'  <li><span class="ref-dot">·</span>{text}</li>')
+                html_lines.append(f"  <li>• {text}</li>")
                 continue
 
         # 면책 고지
@@ -221,7 +232,7 @@ def _build_toc(items: list[tuple[str, str]]) -> str:
     """H2 헤딩 목록으로부터 목차 HTML을 생성한다."""
     toc_lines = [
         '<nav class="toc">',
-        "<h4>목차</h4>",
+        '<p class="toc-title">Contents</p>',
         "<ol>",
     ]
     for text, anchor in items:
@@ -256,6 +267,8 @@ def _inline_format(text: str) -> str:
     text = re.sub(r"\*(.*?)\*", r"<em>\1</em>", text)
     # 인라인 코드
     text = re.sub(r"`(.*?)`", r"<code>\1</code>", text)
+    # 이미지 (링크보다 먼저 처리)
+    text = re.sub(r"!\[(.*?)\]\((.*?)\)", r"<!-- IMG:\2|\1 -->", text)
     # 링크
     text = re.sub(r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>', text)
     return text

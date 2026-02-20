@@ -18,13 +18,13 @@ from blog_agents.models.research import (
 )
 from blog_agents.tools.rss_reader import RSSReader
 from blog_agents.tools.search import WebSearcher
-from blog_agents.tools.web_scraper import GovernmentScraper
+from blog_agents.tools.web_scraper import ExhibitionScraper
 
 console = Console()
 
 
 class ResearchAgent(BaseAgent):
-    """정부부처, 뉴스, 웹에서 이슈를 수집하고 리서치 브리핑을 생성하는 에이전트."""
+    """미술관·갤러리·전시 정보를 수집하고 리서치 브리핑을 생성하는 에이전트."""
 
     agent_name = "리서치"
 
@@ -32,24 +32,22 @@ class ResearchAgent(BaseAgent):
         model = config.models.get("research", "claude-haiku-4-5-20250514")
         super().__init__(config, model=model)
         self.rss_reader = RSSReader(config.sources)
-        self.scraper = GovernmentScraper()
+        self.scraper = ExhibitionScraper()
         self.searcher = WebSearcher()
 
     def discover_topics(self, category: ContentCategory) -> list[TopicSuggestion]:
-        """카테고리별 최신 이슈를 수집하고 블로그 토픽을 제안한다."""
+        """카테고리별 최신 전시 정보를 수집하고 블로그 토픽을 제안한다."""
         console.print(f"\n[bold blue]리서치 에이전트: {category.display_name} 토픽 탐색[/]")
 
         mapping = self.config.sources.get("category_source_mapping", {}).get(
             category.value, {}
         )
 
-        # 글로벌 뉴스: 해외 RSS 중심 수집
-        if category == ContentCategory.GLOBAL_NEWS:
-            rss_items, scraped_items, search_results = self._collect_global_news(mapping)
-        else:
-            rss_items, scraped_items, search_results = self._collect_domestic_news(category, mapping)
+        rss_items, scraped_items, search_results = self._collect_exhibition_data(
+            category, mapping
+        )
 
-        # 4. 수집 데이터를 Claude에게 전달하여 토픽 제안
+        # 수집 데이터를 Claude에게 전달하여 토픽 제안
         raw_data = self._format_raw_data(
             rss_items, scraped_items, search_results, category
         )
@@ -126,11 +124,13 @@ class ResearchAgent(BaseAgent):
             f"## 수집된 자료\n{search_context}\n\n"
             f"위 정보를 바탕으로 블로그 작성을 위한 **완벽한** 리서치 브리핑을 작성해주세요.\n\n"
             f"**필수 요구사항:**\n"
-            f"- background_context: 3문단 이상 (현재 상황 + 역사적 맥락 + 시의성)\n"
-            f"- key_facts: 최소 7개, 각각 구체적 수치/날짜와 (출처명) 포함\n"
-            f"- data_points: 최소 5개, 각각 정확한 수치 + 전월/전년 대비 변동 + 출처\n"
-            f"- expert_opinions: 최소 3개, 긍정/부정 전망 균형 포함\n"
-            f"- legal_references: 관련 법령 조항 (해당 시)\n"
+            f"- background_context: 3문단 이상 (전시 배경 + 작가/미술사적 맥락 + 시의성)\n"
+            f"- key_facts: 최소 7개, 각각 구체적 정보와 (출처명) 포함\n"
+            f"- exhibition_info: 전시명, 장소, 기간, 입장료, 운영시간 등 기본 정보\n"
+            f"- artist_info: 작가 약력, 작품세계, 흥미로운 뒷이야기\n"
+            f"- artwork_highlights: 주요 작품명, 매체, 해석, 숨겨진 이야기\n"
+            f"- data_points: 관람객 수, 작품 수 등 수치 정보\n"
+            f"- expert_opinions: 큐레이터/평론가 의견, 리뷰\n"
             f"- related_topics: 3~5개\n\n"
             f"작가는 이 브리핑만으로 글을 씁니다. 브리핑에 없는 내용은 쓸 수 없으니 풍부하게 작성하세요.\n"
             f"수집된 자료에 없는 사실을 지어내지 마십시오."
@@ -152,7 +152,9 @@ class ResearchAgent(BaseAgent):
             sources=sources,
             background_context=self._remove_future_dates_from_text(brief_output.background_context),
             key_facts=brief_output.key_facts,
-            legal_references=brief_output.legal_references,
+            exhibition_info=brief_output.exhibition_info,
+            artist_info=brief_output.artist_info,
+            artwork_highlights=brief_output.artwork_highlights,
             expert_opinions=brief_output.expert_opinions,
             data_points=brief_output.data_points,
             related_topics=brief_output.related_topics,
@@ -161,58 +163,36 @@ class ResearchAgent(BaseAgent):
         console.print(
             f"  [green]리서치 브리핑 완료 "
             f"(팩트 {len(brief.key_facts)}개, "
-            f"법령 {len(brief.legal_references)}개, "
-            f"데이터 {len(brief.data_points)}개)[/]"
+            f"전시정보 {len(brief.exhibition_info)}개, "
+            f"작품 {len(brief.artwork_highlights)}개)[/]"
         )
         return brief
 
-    def _collect_domestic_news(self, category, mapping):
-        """국내 뉴스 수집 (기존 카테고리용)."""
+    def _collect_exhibition_data(self, category, mapping):
+        """전시 관련 데이터 수집."""
         # 1. RSS 피드 수집
         console.print("  RSS 피드 수집 중...", style="dim")
         rss_urls = self.rss_reader.get_urls_for_category(category.value)
-        rss_items = self.rss_reader.fetch_feeds(rss_urls, days_back=7)
+        rss_items = self.rss_reader.fetch_feeds(rss_urls, days_back=14)
 
-        # 2. 정부 보도자료 스크래핑
-        console.print("  정부 보도자료 확인 중...", style="dim")
+        # 2. 미술관/박물관 전시 목록 스크래핑
+        console.print("  전시 목록 확인 중...", style="dim")
         scraped_items = []
-        scrape_config = self.config.sources.get("government_scrape", {})
-        for agency in mapping.get("government", []):
-            if agency in scrape_config:
-                items = self.scraper.scrape_press_releases(agency)
+        scrape_config = self.config.sources.get("exhibition_scrape", {})
+        for institution in mapping.get("institutions", []):
+            if institution in scrape_config:
+                items = self.scraper.scrape_exhibitions(institution)
                 scraped_items.extend(items)
 
         # 3. 키워드 기반 뉴스 검색
-        console.print("  뉴스 검색 중...", style="dim")
-        keywords = mapping.get("news_keywords", [])
+        console.print("  전시 뉴스 검색 중...", style="dim")
+        keywords = mapping.get("search_keywords", [])
         search_results = []
         for kw in keywords[:3]:
             results = self.searcher.search_news(f"{kw} 2026", max_results=3)
             search_results.extend(results)
 
         return rss_items, scraped_items, search_results
-
-    def _collect_global_news(self, mapping):
-        """글로벌 뉴스 수집 (해외 RSS 중심)."""
-        # 1. 글로벌 RSS 피드 수집
-        console.print("  글로벌 뉴스 RSS 수집 중...", style="dim")
-        global_rss_config = self.config.sources.get("global_news_rss", {})
-        global_urls = []
-        for source_name, feeds in global_rss_config.items():
-            for feed_name, url in feeds.items():
-                global_urls.append(url)
-
-        rss_items = self.rss_reader.fetch_feeds(global_urls, days_back=2)
-
-        # 2. 글로벌 키워드 검색
-        console.print("  글로벌 뉴스 검색 중...", style="dim")
-        keywords = mapping.get("news_keywords", [])
-        search_results = []
-        for kw in keywords[:4]:
-            results = self.searcher.search_news(kw, max_results=3)
-            search_results.extend(results)
-
-        return rss_items, [], search_results
 
     def _format_raw_data(
         self, rss_items, scraped_items, search_results, category
@@ -221,7 +201,7 @@ class ResearchAgent(BaseAgent):
         parts = []
 
         if rss_items:
-            parts.append("### RSS 피드 (최근 뉴스/보도자료)")
+            parts.append("### RSS 피드 (최근 전시 뉴스)")
             for item in rss_items[:30]:
                 date_str = (
                     item.published.strftime("%m/%d") if item.published else "?"
@@ -233,14 +213,14 @@ class ResearchAgent(BaseAgent):
                     parts.append(f"  요약: {item.summary[:500]}")
 
         if scraped_items:
-            parts.append("\n### 정부 보도자료")
+            parts.append("\n### 미술관/갤러리 전시 목록")
             for item in scraped_items[:15]:
                 parts.append(
                     f"- [{item.date or '?'}] {item.title} ({item.source})"
                 )
 
         if search_results:
-            parts.append("\n### 뉴스 검색 결과")
+            parts.append("\n### 전시 뉴스 검색 결과")
             for item in search_results[:15]:
                 parts.append(f"- {item.title}")
                 if item.snippet:
@@ -250,7 +230,7 @@ class ResearchAgent(BaseAgent):
         mapping = self.config.sources.get("category_source_mapping", {}).get(
             category.value, {}
         )
-        keywords = mapping.get("news_keywords", [])
+        keywords = mapping.get("search_keywords", [])
         parts.append(f"주요 키워드: {', '.join(keywords)}")
 
         total = len(rss_items) + len(scraped_items) + len(search_results)

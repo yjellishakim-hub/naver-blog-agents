@@ -21,10 +21,10 @@ console = Console()
 
 
 ROTATION_ORDER = [
-    ContentCategory.MACRO_FINANCE,
-    ContentCategory.REAL_ESTATE_TAX,
-    ContentCategory.CORPORATE_FAIR,
-    ContentCategory.GLOBAL_NEWS,
+    ContentCategory.SEOUL_EXHIBITION,
+    ContentCategory.GWANGJU_CULTURE,
+    ContentCategory.FILM_REVIEW,
+    ContentCategory.WEEKLY_PICK,
 ]
 
 

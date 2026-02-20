@@ -77,7 +77,7 @@ class RSSReader:
         self.sources = sources_config
         self.client = httpx.Client(
             timeout=30.0,
-            headers={"User-Agent": "BlogAgents/1.0 (Korean Economic/Legal Blog)"},
+            headers={"User-Agent": "BlogAgents/1.0 (Korean Art Exhibition Blog)"},
             follow_redirects=True,
         )
 
@@ -113,7 +113,7 @@ class RSSReader:
         source_name = feed.feed.get("title", "Unknown")
         items: list[RSSItem] = []
 
-        for entry in feed.entries:
+        for entry in feed.entries[:30]:  # 피드당 최대 30개로 제한 (속도 최적화)
             pub_date = _parse_date(
                 entry.get("published") or entry.get("updated")
             )
@@ -123,13 +123,8 @@ class RSSReader:
                 continue
 
             raw_url = entry.get("link", "")
-            # Google News RSS 리다이렉트 URL → 실제 기사 URL 변환
-            if "news.google.com/rss/articles/" in raw_url:
-                try:
-                    from blog_agents.tools.search import _resolve_google_news_url
-                    raw_url = _resolve_google_news_url(raw_url)
-                except Exception:
-                    pass
+            # Google News RSS URL은 토픽 제안 시에는 디코딩 생략 (속도 최적화)
+            # 실제 출처 URL은 build_brief 단계에서 디코딩함
 
             items.append(
                 RSSItem(
@@ -159,20 +154,17 @@ class RSSReader:
     def get_urls_for_category(self, category: str) -> list[str]:
         """카테고리에 해당하는 RSS URL 목록 반환."""
         urls: list[str] = []
-        mapping = self.sources.get("category_source_mapping", {}).get(category, {})
-        gov_names = mapping.get("government", [])
 
-        # 정부 RSS
-        gov_rss = self.sources.get("government_rss", {})
-        for name in gov_names:
-            if name in gov_rss:
-                for feed_url in gov_rss[name].values():
-                    if isinstance(feed_url, str):
-                        urls.append(feed_url)
+        # 기관 RSS (아트인사이트 등)
+        institution_rss = self.sources.get("institution_rss", {})
+        for publisher in institution_rss.values():
+            for feed_url in publisher.values():
+                if isinstance(feed_url, str):
+                    urls.append(feed_url)
 
-        # 뉴스 RSS (전체 포함)
-        news_rss = self.sources.get("news_rss", {})
-        for publisher in news_rss.values():
+        # 미술 매체 RSS (Google News 등)
+        art_media_rss = self.sources.get("art_media_rss", {})
+        for publisher in art_media_rss.values():
             for feed_url in publisher.values():
                 if isinstance(feed_url, str):
                     urls.append(feed_url)

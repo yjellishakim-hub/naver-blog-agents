@@ -5,30 +5,31 @@ from enum import Enum
 from typing import Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ContentCategory(str, Enum):
-    MACRO_FINANCE = "macro_finance"
-    REAL_ESTATE_TAX = "real_estate_tax"
-    CORPORATE_FAIR = "corporate_fair"
-    GLOBAL_NEWS = "global_news"
+    SEOUL_EXHIBITION = "seoul_exhibition"
+    GWANGJU_CULTURE = "gwangju_culture"
+    FILM_REVIEW = "film_review"
+    WEEKLY_PICK = "weekly_pick"
 
     @property
     def display_name(self) -> str:
         names = {
-            "macro_finance": "거시경제·금융정책",
-            "real_estate_tax": "부동산·세법",
-            "corporate_fair": "기업법·공정거래",
-            "global_news": "글로벌 뉴스",
+            "seoul_exhibition": "서울 전시",
+            "gwangju_culture": "광주 문화",
+            "film_review": "영화 리뷰",
+            "weekly_pick": "주간 추천",
         }
         return names[self.value]
 
 
 class SourceType(str, Enum):
-    GOVERNMENT_PRESS = "government_press"
+    MUSEUM_WEBSITE = "museum_website"
+    ART_MEDIA = "art_media"
+    EXHIBITION_AGGREGATOR = "exhibition_aggregator"
     RSS_NEWS = "rss_news"
-    LAW_API = "law_api"
     WEB_SEARCH = "web_search"
 
 
@@ -69,11 +70,20 @@ class ResearchBrief(BaseModel):
     key_facts: list[str] = Field(
         default_factory=list, description="핵심 팩트 5개 이상"
     )
-    legal_references: list[str] = Field(
-        default_factory=list, description="관련 법령명과 조항"
+    exhibition_info: list[str] = Field(
+        default_factory=list,
+        description="전시명, 장소, 기간, 입장료, 운영시간 등 기본 정보",
+    )
+    artist_info: list[str] = Field(
+        default_factory=list,
+        description="작가 약력, 작품세계, 흥미로운 뒷이야기",
+    )
+    artwork_highlights: list[str] = Field(
+        default_factory=list,
+        description="주요 작품명, 매체, 해석, 숨겨진 이야기",
     )
     expert_opinions: list[str] = Field(
-        default_factory=list, description="전문가 의견/입장"
+        default_factory=list, description="큐레이터·평론가 의견/리뷰"
     )
     data_points: list[str] = Field(
         default_factory=list, description="통계 수치와 데이터"
@@ -88,7 +98,28 @@ class ResearchBriefOutput(BaseModel):
 
     background_context: str
     key_facts: list[str]
-    legal_references: list[str]
+    exhibition_info: list[str]
+    artist_info: list[str]
+    artwork_highlights: list[str]
     expert_opinions: list[str]
     data_points: list[str]
     related_topics: list[str]
+
+    @model_validator(mode="before")
+    @classmethod
+    def flatten_dict_lists(cls, data):
+        """LLM이 list[str] 대신 list[dict]를 반환할 경우 자동 변환."""
+        if not isinstance(data, dict):
+            return data
+        for field_name in [
+            "key_facts", "exhibition_info", "artist_info",
+            "artwork_highlights", "expert_opinions", "data_points",
+            "related_topics",
+        ]:
+            items = data.get(field_name, [])
+            if items and isinstance(items[0], dict):
+                data[field_name] = [
+                    " ".join(str(v) for v in item.values())
+                    for item in items
+                ]
+        return data

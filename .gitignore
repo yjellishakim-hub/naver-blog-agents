@@ -14,8 +14,8 @@ __pycache__/
 dist/
 build/
 
-# Google credentials
-config/google/
+# Naver session
+.blog-agents/
 
 # IDE
 .vscode/

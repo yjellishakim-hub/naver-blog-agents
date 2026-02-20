@@ -1,0 +1,110 @@
+/* ===================================================================
+   전시 매거진 블로그 — 네이버 블로그 스킨 CSS
+   ===================================================================
+
+   적용 방법:
+   1. 네이버 블로그 관리 → 꾸미기 → 레이아웃·위젯 설정
+   2. 사이드바에 "HTML 위젯" 추가
+   3. 이 CSS를 <style>...</style> 태그로 감싸서 붙여넣기
+   4. 저장
+
+   또는:
+   1. 네이버 블로그 관리 → 꾸미기 → 스킨 편집 → HTML 편집
+   2. </head> 바로 위에 <style>...</style> 태그로 추가
+   =================================================================== */
+
+/* ── 본문 타이포그래피 ── */
+.se-main-container .se-text-paragraph {
+    font-size: 16.5px !important;
+    line-height: 2.0 !important;
+    color: #333 !important;
+    word-break: keep-all !important;
+    letter-spacing: -0.2px !important;
+}
+
+/* ── 제목 ── */
+.se-title-text .se-text-paragraph {
+    font-weight: 700 !important;
+    color: #1A1A1A !important;
+    letter-spacing: -0.5px !important;
+    line-height: 1.35 !important;
+}
+
+/* ── 이미지 컴포넌트 여백 ── */
+.se-main-container .se-component.se-image {
+    margin: 36px 0 48px !important;
+}
+
+/* ── 이미지 캡션 ── */
+.se-main-container .se-caption .se-text-paragraph {
+    font-size: 12px !important;
+    color: #999 !important;
+    line-height: 1.6 !important;
+    letter-spacing: 0.02em !important;
+}
+
+/* ── 테이블 컴포넌트 (디자인 요소) ── */
+.se-main-container .se-component.se-table {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* 테이블 내부 텍스트 — margin 초기화 */
+.se-main-container .se-component.se-table .se-text-paragraph {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ── 테이블 셀 타이포그래피 ── */
+.se-main-container .se-component.se-table td {
+    font-size: 16.5px !important;
+    line-height: 2.0 !important;
+    color: #333 !important;
+    word-break: keep-all !important;
+    vertical-align: top !important;
+}
+
+/* ── 테이블 기본 스타일 초기화 ── */
+.se-main-container .se-component.se-table table {
+    border-spacing: 0 !important;
+}
+
+/* ── 인용구 ── */
+.se-main-container .se-component.se-quotation .se-text-paragraph {
+    font-size: 18px !important;
+    color: #444 !important;
+    line-height: 1.7 !important;
+    font-style: italic !important;
+}
+
+/* ── bold 텍스트 강조 ── */
+.se-main-container .se-text-paragraph b,
+.se-main-container .se-text-paragraph strong {
+    color: #1A1A1A !important;
+    font-weight: 700 !important;
+}
+
+/* ── 링크 스타일 ── */
+.se-main-container .se-text-paragraph a {
+    color: #1A1A1A !important;
+    text-decoration: underline !important;
+    text-underline-offset: 3px !important;
+}
+
+/* ── 컴포넌트 간 기본 간격 조정 ── */
+.se-main-container .se-component.se-text + .se-component.se-text {
+    margin-top: 0 !important;
+}
+
+.se-main-container .se-component.se-text + .se-component.se-table,
+.se-main-container .se-component.se-table + .se-component.se-text {
+    margin-top: 0 !important;
+}
+
+.se-main-container .se-component.se-text + .se-component.se-image {
+    margin-top: 36px !important;
+}
+
+.se-main-container .se-component.se-image + .se-component.se-text {
+    margin-top: 0 !important;
+}

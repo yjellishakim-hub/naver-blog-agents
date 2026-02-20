@@ -149,7 +149,13 @@ class BaseAgent(ABC):
         max_retries: int = 3,
         **config_kwargs,
     ):
-        """Rate limit 시 자동 재시도."""
+        """Rate limit / 할당량 초과 시 자동 재시도.
+
+        일일 쿼터(PerDay) 소진 시에는 재시도하지 않고 즉시 실패.
+        분당 제한(PerMinute) 시에만 대기 후 재시도.
+        """
+        import re as _re
+
         for attempt in range(max_retries):
             try:
                 return self.client.models.generate_content(
@@ -158,10 +164,24 @@ class BaseAgent(ABC):
                     config=types.GenerateContentConfig(**config_kwargs),
                 )
             except ClientError as e:
-                if "429" in str(e) and attempt < max_retries - 1:
-                    wait = 30 * (attempt + 1)
+                err_str = str(e)
+                if "429" not in err_str:
+                    raise
+
+                # 일일 쿼터 소진 → 재시도 무의미
+                if "PerDay" in err_str:
                     console.print(
-                        f"  [yellow]Rate limit - {wait}초 대기 후 재시도...[/]"
+                        f"  [red]{self.model} 일일 쿼터 소진. "
+                        f"다른 모델로 전환하거나 내일 재시도하세요.[/]"
+                    )
+                    raise
+
+                if attempt < max_retries - 1:
+                    delay_match = _re.search(r"retryDelay.*?(\d+)", err_str)
+                    wait = int(delay_match.group(1)) + 5 if delay_match else 30 * (attempt + 1)
+                    console.print(
+                        f"  [yellow]Rate limit - {wait}초 대기 후 재시도 "
+                        f"({attempt + 1}/{max_retries - 1})...[/]"
                     )
                     time.sleep(wait)
                 else:

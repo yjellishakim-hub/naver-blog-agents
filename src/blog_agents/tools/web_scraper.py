@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Optional
 
 import httpx
@@ -29,17 +28,30 @@ class ScrapedItem:
         }
 
 
-class GovernmentScraper:
-    """RSS가 없는 정부 사이트의 보도자료를 스크래핑."""
+class ExhibitionScraper:
+    """미술관·박물관 사이트에서 전시 목록을 스크래핑."""
 
-    # 스크래핑 설정
     CONFIGS = {
-        "공정거래위원회": {
-            "url": "https://www.ftc.go.kr/www/selectReportUserList.do?key=10",
-            "list_selector": "table tbody tr",
-            "title_selector": "td.tl a, td:nth-child(2) a",
-            "date_selector": "td:nth-child(5), td:last-child",
-            "base_url": "https://www.ftc.go.kr",
+        "국립현대미술관": {
+            "url": "https://www.mmca.go.kr/exhibitions/exhibitionList.do",
+            "list_selector": "ul.list_exhibition li",
+            "title_selector": ".txt_info .tit",
+            "date_selector": ".txt_info .date",
+            "base_url": "https://www.mmca.go.kr",
+        },
+        "서울시립미술관": {
+            "url": "https://sema.seoul.go.kr/kr/whatson/exhibition/list",
+            "list_selector": ".exhibit-list li",
+            "title_selector": ".info .tit",
+            "date_selector": ".info .date",
+            "base_url": "https://sema.seoul.go.kr",
+        },
+        "국립중앙박물관": {
+            "url": "https://www.museum.go.kr/site/main/exhi/special/list",
+            "list_selector": ".exhibit_list li",
+            "title_selector": ".txt_area .tit",
+            "date_selector": ".txt_area .date",
+            "base_url": "https://www.museum.go.kr",
         },
     }
 
@@ -55,17 +67,17 @@ class GovernmentScraper:
             follow_redirects=True,
         )
 
-    def scrape_press_releases(
-        self, agency: str, max_items: int = 15
+    def scrape_exhibitions(
+        self, institution: str, max_items: int = 15
     ) -> list[ScrapedItem]:
-        """정부 기관 보도자료 목록을 스크래핑."""
-        if agency not in self.CONFIGS:
+        """미술관/박물관 전시 목록을 스크래핑."""
+        if institution not in self.CONFIGS:
             console.print(
-                f"  [스크래퍼] {agency}: 스크래핑 설정 없음", style="yellow"
+                f"  [스크래퍼] {institution}: 스크래핑 설정 없음", style="yellow"
             )
             return []
 
-        config = self.CONFIGS[agency]
+        config = self.CONFIGS[institution]
         items: list[ScrapedItem] = []
 
         try:
@@ -83,6 +95,9 @@ class GovernmentScraper:
 
                 title = title_el.get_text(strip=True)
                 href = title_el.get("href", "")
+                if not href:
+                    link_el = row.select_one("a")
+                    href = link_el.get("href", "") if link_el else ""
                 if href and not href.startswith("http"):
                     href = config.get("base_url", "") + href
 
@@ -93,34 +108,35 @@ class GovernmentScraper:
                         title=title,
                         url=href,
                         date=date_text,
-                        source=agency,
+                        source=institution,
                     )
                 )
 
             console.print(
-                f"  [스크래퍼] {agency}: {len(items)}개 항목", style="dim"
+                f"  [스크래퍼] {institution}: {len(items)}개 전시", style="dim"
             )
 
         except Exception as e:
             console.print(
-                f"  [스크래퍼] {agency} 스크래핑 오류: {e}", style="yellow"
+                f"  [스크래퍼] {institution} 스크래핑 오류: {e}", style="yellow"
             )
 
         time.sleep(1)  # 서버 부하 방지
         return items
 
     def fetch_article_text(self, url: str) -> str:
-        """개별 기사/보도자료의 본문 텍스트를 가져온다."""
+        """개별 전시 상세 페이지의 본문 텍스트를 가져온다."""
         try:
             response = self.client.get(url)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "lxml")
 
-            # 일반적인 본문 영역 셀렉터 시도
+            # 전시 상세 페이지 본문 영역 셀렉터
             content_selectors = [
-                "div.board_view_con",
+                "div.exhibit_detail",
+                "div.exhibition_view",
                 "div.view_con",
-                "div.bbs_detail",
+                "div.board_view_con",
                 "div#content",
                 "article",
                 "div.content",
@@ -130,11 +146,9 @@ class GovernmentScraper:
                 content = soup.select_one(selector)
                 if content:
                     text = content.get_text(separator="\n", strip=True)
-                    # 불필요한 공백 정리
                     text = re.sub(r"\n{3,}", "\n\n", text)
                     return text[:3000]
 
-            # 셀렉터로 못 찾으면 body 텍스트 반환
             body = soup.find("body")
             if body:
                 return body.get_text(separator="\n", strip=True)[:2000]

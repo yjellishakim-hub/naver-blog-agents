@@ -14,10 +14,10 @@ console = Console()
 
 # 카테고리별 스타일 프롬프트 파일 매핑
 STYLE_PROMPTS = {
-    ContentCategory.MACRO_FINANCE: "writer_macro.md",
-    ContentCategory.REAL_ESTATE_TAX: "writer_realestate.md",
-    ContentCategory.CORPORATE_FAIR: "writer_corporate.md",
-    ContentCategory.GLOBAL_NEWS: "writer_global_news.md",
+    ContentCategory.MUSEUM: "writer_museum.md",
+    ContentCategory.GALLERY: "writer_gallery.md",
+    ContentCategory.ART_FAIR: "writer_artfair.md",
+    ContentCategory.SPECIAL: "writer_special.md",
 }
 
 
@@ -42,7 +42,7 @@ class WriterAgent(BaseAgent):
         )
 
         # 프롬프트 조합: 기본 + 카테고리 스타일
-        style_file = STYLE_PROMPTS.get(brief.category, "writer_macro.md")
+        style_file = STYLE_PROMPTS.get(brief.category, "writer_museum.md")
 
         # 수정 요청이 있는 경우 프롬프트에 포함
         revision_instructions = ""
@@ -112,10 +112,20 @@ class WriterAgent(BaseAgent):
             for fact in brief.key_facts:
                 parts.append(f"- {fact}")
 
-        if brief.legal_references:
-            parts.append("\n## 관련 법령")
-            for ref in brief.legal_references:
-                parts.append(f"- {ref}")
+        if brief.exhibition_info:
+            parts.append("\n## 전시 기본 정보")
+            for info in brief.exhibition_info:
+                parts.append(f"- {info}")
+
+        if brief.artist_info:
+            parts.append("\n## 작가 정보")
+            for info in brief.artist_info:
+                parts.append(f"- {info}")
+
+        if brief.artwork_highlights:
+            parts.append("\n## 주요 작품")
+            for work in brief.artwork_highlights:
+                parts.append(f"- {work}")
 
         if brief.expert_opinions:
             parts.append("\n## 전문가 의견")

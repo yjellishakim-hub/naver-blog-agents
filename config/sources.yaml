@@ -1,54 +1,64 @@
-# 데이터 소스 설정
+# 데이터 소스 설정 — 미술 전시 정보
 
-government_rss:
-  기획재정부:
-    press: "https://www.moef.go.kr/com/detailRssTagService.do?bbsId=MOSFBBS_000000000028"
-    policy: "https://www.moef.go.kr/com/detailRssTagService.do?bbsId=MOSFBBS_000000000039"
-  금융위원회:
-    press: "https://www.fsc.go.kr/about/fsc_bbs_rss/?fid=0111"
-  국토교통부:
-    press: "https://www.molit.go.kr/USR/p_etc_rsssvc/m_123/ers.jsp"
+institution_rss:
+  아트인사이트:
+    all: "https://www.artinsight.co.kr/rss/allArticle.xml"
 
-government_scrape:
-  공정거래위원회:
-    url: "https://www.ftc.go.kr/www/selectReportUserList.do?key=10"
-    list_selector: "table.board_list tbody tr"
-    title_selector: "td.tit a"
-    date_selector: "td:nth-child(5)"
+exhibition_scrape:
+  국립현대미술관:
+    url: "https://www.mmca.go.kr/exhibitions/exhibitionList.do"
+    list_selector: "ul.list_exhibition li"
+    title_selector: ".txt_info .tit"
+    date_selector: ".txt_info .date"
+  서울시립미술관:
+    url: "https://sema.seoul.go.kr/kr/whatson/exhibition/list"
+    list_selector: ".exhibit-list li"
+    title_selector: ".info .tit"
+    date_selector: ".info .date"
+  국립중앙박물관:
+    url: "https://www.museum.go.kr/site/main/exhi/special/list"
+    list_selector: ".exhibit_list li"
+    title_selector: ".txt_area .tit"
+    date_selector: ".txt_area .date"
+  광주시립미술관:
+    url: "https://artmuse.gwangju.go.kr/01_exhibition/now.asp"
+    list_selector: ".exhibition_list li"
+    title_selector: ".tit"
+    date_selector: ".date"
+  국립아시아문화전당:
+    url: "https://www.acc.go.kr/main/ko/exhibition/current.do"
+    list_selector: ".exhibit_list li"
+    title_selector: ".exhibit_tit"
+    date_selector: ".exhibit_date"
 
-news_rss:
-  한국경제:
-    economy: "https://www.hankyung.com/feed/economy"
-    realestate: "https://www.hankyung.com/feed/realestate"
-  매일경제:
-    all: "https://www.mk.co.kr/rss/40300001/"
+art_media_rss:
+  Google_News_전시:
+    all: "https://news.google.com/rss/search?q=미술+전시+when:14d&hl=ko&gl=KR&ceid=KR:ko"
+  Google_News_아트페어:
+    all: "https://news.google.com/rss/search?q=아트페어+OR+비엔날레+when:14d&hl=ko&gl=KR&ceid=KR:ko"
+  Google_News_갤러리:
+    all: "https://news.google.com/rss/search?q=갤러리+전시+개인전+when:14d&hl=ko&gl=KR&ceid=KR:ko"
+  Google_News_광주문화:
+    all: "https://news.google.com/rss/search?q=광주+문화예술+OR+광주비엔날레+when:14d&hl=ko&gl=KR&ceid=KR:ko"
 
-global_news_rss:
-  Reuters:
-    world: "https://feeds.reuters.com/reuters/worldNews"
-    business: "https://feeds.reuters.com/reuters/businessNews"
-    technology: "https://feeds.reuters.com/reuters/technologyNews"
-  BBC:
-    world: "http://feeds.bbci.co.uk/news/world/rss.xml"
-    business: "http://feeds.bbci.co.uk/news/business/rss.xml"
-  AP_News:
-    top: "https://rsshub.app/apnews/topics/apf-topnews"
-  Al_Jazeera:
-    all: "https://www.aljazeera.com/xml/rss/all.xml"
-  CNBC:
-    world: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"
+film_data_rss:
+  네이버영화_최신뉴스:
+    all: "https://movie.naver.com/movie/running/current.naver?rss=true"
+  Google_News_영화:
+    all: "https://news.google.com/rss/search?q=영화+개봉+OR+영화+리뷰+when:7d&hl=ko&gl=KR&ceid=KR:ko"
+  Google_News_영화제:
+    all: "https://news.google.com/rss/search?q=영화제+OR+전주국제영화제+OR+부산국제영화제+when:14d&hl=ko&gl=KR&ceid=KR:ko"
 
 category_source_mapping:
-  macro_finance:
-    government: ["기획재정부", "금융위원회"]
-    news_keywords: ["금리", "물가", "GDP", "환율", "통화정책", "재정정책", "한국은행", "기준금리"]
-  real_estate_tax:
-    government: ["국토교통부", "기획재정부"]
-    news_keywords: ["부동산", "주택", "양도세", "종부세", "취득세", "임대차", "전세", "공시가격"]
-  corporate_fair:
-    government: ["공정거래위원회"]
-    news_keywords: ["공정거래", "독점", "기업결합", "상법", "ESG", "지배구조", "하도급", "대기업집단"]
-  global_news:
-    government: []
-    news_keywords: ["world news today", "breaking news", "global economy", "geopolitics", "AI technology", "climate change"]
-    use_global_rss: true
+  seoul_exhibition:
+    institutions: ["국립현대미술관", "서울시립미술관", "국립중앙박물관"]
+    search_keywords: ["서울 전시", "미술관 전시", "갤러리 전시", "국립현대미술관", "서울시립미술관", "리움미술관", "아모레퍼시픽미술관", "갤러리현대", "국제갤러리", "페이스갤러리"]
+  gwangju_culture:
+    institutions: ["광주시립미술관", "국립아시아문화전당"]
+    search_keywords: ["광주 전시", "광주 문화예술", "광주비엔날레", "광주시립미술관", "국립아시아문화전당", "ACC", "5.18 문화", "광주 현대미술"]
+  film_review:
+    institutions: []
+    search_keywords: ["영화 개봉", "영화 리뷰", "영화 평론", "한국영화", "독립영화", "CGV", "메가박스", "롯데시네마", "아트하우스 모모", "전주국제영화제", "부산국제영화제"]
+  weekly_pick:
+    institutions: []
+    search_keywords: ["이주의 전시", "주말 전시", "주말 영화", "전시 추천", "영화 추천", "문화생활 추천"]

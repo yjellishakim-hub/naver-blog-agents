@@ -10,12 +10,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    law_api_key: str = Field(default="", alias="LAW_API_KEY")
-    google_credentials_path: str = Field(
-        default="config/google/credentials.json",
-        alias="GOOGLE_CREDENTIALS_PATH",
-    )
-    blogger_blog_id: str = Field(default="", alias="BLOGGER_BLOG_ID")
+    naver_blog_id: str = Field(default="", alias="NAVER_BLOG_ID")
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
