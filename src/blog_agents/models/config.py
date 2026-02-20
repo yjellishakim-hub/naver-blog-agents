@@ -49,6 +49,10 @@ class AppConfig:
         return self.root / "config" / "prompts"
 
     @property
+    def naver_categories(self) -> dict:
+        return self._yaml.get("naver_categories", {})
+
+    @property
     def output_dir(self) -> Path:
         base = self._yaml.get("storage", {}).get("base_path", "./output")
         return self.root / base

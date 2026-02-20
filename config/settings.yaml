@@ -32,6 +32,12 @@ content:
     wednesday: "gwangju_culture"
     friday: "k_content"
 
+# 네이버 블로그 카테고리 매핑
+naver_categories:
+  seoul_exhibition: "서울 전시"
+  gwangju_culture: "광주 문화"
+  k_content: "K-콘텐츠"
+
 # 저장
 storage:
   base_path: "./output"

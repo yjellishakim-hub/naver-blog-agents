@@ -96,6 +96,7 @@ class NaverBlogPublisher:
         markdown_path: str | Path,
         tags: list[str] | None = None,
         is_draft: bool = False,
+        category_name: str | None = None,
     ) -> dict:
         """마크다운 파일을 읽어 네이버 블로그에 발행한다."""
         path = Path(markdown_path)
@@ -131,6 +132,10 @@ class NaverBlogPublisher:
 
         # 글쓰기 페이지 열기
         await self._open_editor()
+
+        # 카테고리 선택
+        if category_name:
+            await self._select_category(category_name)
 
         # 제목 입력
         await self._fill_title(title)
@@ -186,6 +191,70 @@ class NaverBlogPublisher:
                 await asyncio.sleep(1)
         except Exception:
             pass  # 팝업이 없으면 무시
+
+    async def _select_category(self, category_name: str):
+        """SmartEditor ONE에서 블로그 카테고리를 선택한다."""
+        console.print(f'  카테고리 선택: "{category_name}"', style="dim")
+
+        # 카테고리 버튼 클릭 (여러 셀렉터 시도)
+        cat_btn_selectors = [
+            'button.se-category-button',
+            '.blog_category button',
+            '[data-click-area="tpb.category"]',
+            'button:has-text("카테고리")',
+            '.se-header button:has-text("카테고리")',
+        ]
+
+        cat_btn = None
+        for sel in cat_btn_selectors:
+            try:
+                cat_btn = await self._page.query_selector(sel)
+                if cat_btn and await cat_btn.is_visible():
+                    break
+                cat_btn = None
+            except Exception:
+                cat_btn = None
+
+        if not cat_btn:
+            console.print(
+                "  [yellow]카테고리 버튼을 찾을 수 없습니다. "
+                "카테고리 미설정 상태로 진행합니다.[/]"
+            )
+            return
+
+        await cat_btn.click()
+        await asyncio.sleep(1)
+
+        # 카테고리 목록에서 해당 이름의 항목 클릭
+        try:
+            cat_item = await self._page.query_selector(
+                f'text="{category_name}"'
+            )
+            if not cat_item:
+                # 부분 매칭 시도
+                cat_item = await self._page.query_selector(
+                    f'li:has-text("{category_name}"), '
+                    f'a:has-text("{category_name}"), '
+                    f'span:has-text("{category_name}"), '
+                    f'button:has-text("{category_name}")'
+                )
+
+            if cat_item:
+                await cat_item.click()
+                await asyncio.sleep(0.5)
+                console.print(
+                    f'  [green]카테고리 "{category_name}" 선택 완료[/]'
+                )
+            else:
+                console.print(
+                    f'  [yellow]카테고리 "{category_name}"을 목록에서 '
+                    f'찾을 수 없습니다.[/]'
+                )
+                # 드롭다운 닫기 (ESC)
+                await self._page.keyboard.press("Escape")
+        except Exception as e:
+            console.print(f"  [yellow]카테고리 선택 실패: {e}[/]")
+            await self._page.keyboard.press("Escape")
 
     async def _fill_title(self, title: str):
         """제목 입력 필드에 제목을 작성한다."""
@@ -698,6 +767,7 @@ def run_naver_publish(
     markdown_path: str | Path,
     tags: list[str] | None = None,
     is_draft: bool = False,
+    category_name: str | None = None,
 ) -> dict:
     """동기 래퍼: 네이버 블로그에 마크다운 파일을 발행한다."""
     async def _run():
@@ -705,6 +775,7 @@ def run_naver_publish(
         try:
             return await publisher.publish_markdown_file(
                 markdown_path, tags=tags, is_draft=is_draft,
+                category_name=category_name,
             )
         finally:
             await publisher.close()

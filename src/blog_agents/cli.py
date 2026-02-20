@@ -145,8 +145,12 @@ def _auto_publish_naver(config: AppConfig, category, blog_post, is_draft: bool =
         md_path = published_files[0]
         tags = [category.display_name]
 
+        # 네이버 블로그 카테고리 매핑
+        naver_cat_name = config.naver_categories.get(cat_value)
+
         result = run_naver_publish(
             naver_id, md_path, tags=tags, is_draft=is_draft,
+            category_name=naver_cat_name,
         )
 
         status = "임시저장" if is_draft else "공개"
@@ -282,13 +286,16 @@ def _publish_naver(config: AppConfig, md_path: Path, draft: bool):
         from blog_agents.publisher.naver import run_naver_publish
 
         tags = None
+        naver_cat_name = None
         for cat in ContentCategory:
             if cat.value in md_path.name:
                 tags = [cat.display_name]
+                naver_cat_name = config.naver_categories.get(cat.value)
                 break
 
         result = run_naver_publish(
             naver_id, md_path, tags=tags, is_draft=draft,
+            category_name=naver_cat_name,
         )
 
         console.print(
