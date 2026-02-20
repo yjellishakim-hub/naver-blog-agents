@@ -125,7 +125,7 @@ def markdown_to_html(md_text: str) -> str:
         # 면책 고지
         if ("면책 고지" in stripped or "면책고지" in stripped
                 or "본 글은 정보 제공 목적" in stripped
-                or "법률 자문이나 투자 권유가 아닙니다" in stripped):
+                or "공식 사이트에서 확인" in stripped):
             text = _inline_format(stripped.lstrip("*> "))
             # 이미 disclaimer div가 열려있으면 추가, 아니면 새로 열기
             if html_lines and '<div class="disclaimer">' in html_lines[-1]:
@@ -141,7 +141,7 @@ def markdown_to_html(md_text: str) -> str:
             continue
 
         # 면책 고지 두 번째 줄 (전문가 상담 안내)
-        if "전문가와 상담" in stripped or "법률·세무 문제" in stripped:
+        if "방문 전" in stripped or "변경될 수 있으니" in stripped:
             text = _inline_format(stripped.lstrip("*> "))
             if html_lines and "disclaimer" in html_lines[-1]:
                 last = html_lines.pop()

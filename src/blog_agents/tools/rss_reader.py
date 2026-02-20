@@ -155,19 +155,26 @@ class RSSReader:
         """카테고리에 해당하는 RSS URL 목록 반환."""
         urls: list[str] = []
 
-        # 기관 RSS (아트인사이트 등)
-        institution_rss = self.sources.get("institution_rss", {})
-        for publisher in institution_rss.values():
-            for feed_url in publisher.values():
-                if isinstance(feed_url, str):
-                    urls.append(feed_url)
+        if category == "k_content":
+            # K-콘텐츠는 전용 RSS 사용
+            kcontent_rss = self.sources.get("kcontent_rss", {})
+            for publisher in kcontent_rss.values():
+                for feed_url in publisher.values():
+                    if isinstance(feed_url, str):
+                        urls.append(feed_url)
+        else:
+            # 전시 카테고리: 기관 RSS + 미술 매체 RSS
+            institution_rss = self.sources.get("institution_rss", {})
+            for publisher in institution_rss.values():
+                for feed_url in publisher.values():
+                    if isinstance(feed_url, str):
+                        urls.append(feed_url)
 
-        # 미술 매체 RSS (Google News 등)
-        art_media_rss = self.sources.get("art_media_rss", {})
-        for publisher in art_media_rss.values():
-            for feed_url in publisher.values():
-                if isinstance(feed_url, str):
-                    urls.append(feed_url)
+            art_media_rss = self.sources.get("art_media_rss", {})
+            for publisher in art_media_rss.values():
+                for feed_url in publisher.values():
+                    if isinstance(feed_url, str):
+                        urls.append(feed_url)
 
         return urls
 
