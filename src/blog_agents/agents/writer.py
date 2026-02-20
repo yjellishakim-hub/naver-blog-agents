@@ -17,7 +17,7 @@ STYLE_PROMPTS = {
     ContentCategory.SEOUL_EXHIBITION: "writer_agent.md",  # 서울 전시는 기본 프롬프트 사용
     ContentCategory.GWANGJU_CULTURE: "writer_gwangju.md",
     ContentCategory.FILM_REVIEW: "writer_film.md",
-    ContentCategory.WEEKLY_PICK: "writer_agent.md",  # 주간 추천은 기본 프롬프트 사용
+    ContentCategory.WEEKLY_PICK: "writer_weekly.md",
 }
 
 
@@ -42,7 +42,7 @@ class WriterAgent(BaseAgent):
         )
 
         # 프롬프트 조합: 기본 + 카테고리 스타일
-        style_file = STYLE_PROMPTS.get(brief.category, "writer_museum.md")
+        style_file = STYLE_PROMPTS.get(brief.category, "writer_agent.md")
 
         # 수정 요청이 있는 경우 프롬프트에 포함
         revision_instructions = ""

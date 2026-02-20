@@ -21,7 +21,7 @@ quality:
 
 # 콘텐츠 설정
 content:
-  posts_per_week: 3
+  posts_per_week: 4
   categories:
     - seoul_exhibition
     - gwangju_culture
