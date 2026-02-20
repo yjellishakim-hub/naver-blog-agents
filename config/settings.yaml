@@ -1,14 +1,14 @@
 # 블로그 에이전트 설정
 project:
   name: "el_filmography"
-  subtitle: "영화와 전시로 읽는 문화예술"
+  subtitle: "전시, 영화, 드라마로 읽는 문화예술"
   language: "ko"
   timezone: "Asia/Seoul"
 
-# 모델 배분 (Gemini 무료 티어 — 모델별 별도 쿼터)
+# 모델 배분 (Gemini — 모델별 별도 쿼터)
 models:
   research: "gemini-2.5-flash"
-  writer: "gemini-2.5-flash"
+  writer: "gemini-2.5-pro"
   editor: "gemini-2.5-flash"
   metadata: "gemini-2.5-flash"
 
@@ -21,13 +21,16 @@ quality:
 
 # 콘텐츠 설정
 content:
-  posts_per_week: 4
+  posts_per_week: 3
   categories:
     - seoul_exhibition
     - gwangju_culture
-    - film_review
-    - weekly_pick
-  rotation: "round_robin"
+    - k_content
+  rotation: "weekday"
+  schedule:
+    monday: "seoul_exhibition"
+    wednesday: "gwangju_culture"
+    friday: "k_content"
 
 # 저장
 storage:

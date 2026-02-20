@@ -23,8 +23,7 @@ console = Console()
 ROTATION_ORDER = [
     ContentCategory.SEOUL_EXHIBITION,
     ContentCategory.GWANGJU_CULTURE,
-    ContentCategory.FILM_REVIEW,
-    ContentCategory.WEEKLY_PICK,
+    ContentCategory.K_CONTENT,
 ]
 
 

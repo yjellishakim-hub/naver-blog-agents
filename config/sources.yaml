@@ -41,11 +41,15 @@ art_media_rss:
   Google_News_광주문화:
     all: "https://news.google.com/rss/search?q=광주+문화예술+OR+광주비엔날레+when:14d&hl=ko&gl=KR&ceid=KR:ko"
 
-film_data_rss:
+kcontent_rss:
   네이버영화_최신뉴스:
     all: "https://movie.naver.com/movie/running/current.naver?rss=true"
   Google_News_영화:
     all: "https://news.google.com/rss/search?q=영화+개봉+OR+영화+리뷰+when:7d&hl=ko&gl=KR&ceid=KR:ko"
+  Google_News_K드라마:
+    all: "https://news.google.com/rss/search?q=한국드라마+OR+K드라마+OR+넷플릭스+한국+when:7d&hl=ko&gl=KR&ceid=KR:ko"
+  Google_News_OTT:
+    all: "https://news.google.com/rss/search?q=OTT+오리지널+OR+티빙+OR+쿠팡플레이+OR+디즈니플러스+when:7d&hl=ko&gl=KR&ceid=KR:ko"
   Google_News_영화제:
     all: "https://news.google.com/rss/search?q=영화제+OR+전주국제영화제+OR+부산국제영화제+when:14d&hl=ko&gl=KR&ceid=KR:ko"
 
@@ -56,9 +60,6 @@ category_source_mapping:
   gwangju_culture:
     institutions: ["광주시립미술관", "국립아시아문화전당"]
     search_keywords: ["광주 전시", "광주 문화예술", "광주비엔날레", "광주시립미술관", "국립아시아문화전당", "ACC", "5.18 문화", "광주 현대미술"]
-  film_review:
+  k_content:
     institutions: []
-    search_keywords: ["영화 개봉", "영화 리뷰", "영화 평론", "한국영화", "독립영화", "CGV", "메가박스", "롯데시네마", "아트하우스 모모", "전주국제영화제", "부산국제영화제"]
-  weekly_pick:
-    institutions: []
-    search_keywords: ["이주의 전시", "주말 전시", "주말 영화", "전시 추천", "영화 추천", "문화생활 추천", "문화 이벤트", "공연 추천", "서울 문화", "광주 문화"]
+    search_keywords: ["영화 개봉", "영화 리뷰", "한국영화", "K드라마", "넷플릭스 한국", "OTT 오리지널", "티빙 드라마", "쿠팡플레이", "디즈니플러스 한국", "한국 드라마 추천", "영화 추천", "부산국제영화제"]

@@ -16,8 +16,7 @@ console = Console()
 STYLE_PROMPTS = {
     ContentCategory.SEOUL_EXHIBITION: "writer_agent.md",  # 서울 전시는 기본 프롬프트 사용
     ContentCategory.GWANGJU_CULTURE: "writer_gwangju.md",
-    ContentCategory.FILM_REVIEW: "writer_film.md",
-    ContentCategory.WEEKLY_PICK: "writer_weekly.md",
+    ContentCategory.K_CONTENT: "writer_kcontent.md",
 }
 
 

@@ -11,16 +11,14 @@ from pydantic import BaseModel, Field, model_validator
 class ContentCategory(str, Enum):
     SEOUL_EXHIBITION = "seoul_exhibition"
     GWANGJU_CULTURE = "gwangju_culture"
-    FILM_REVIEW = "film_review"
-    WEEKLY_PICK = "weekly_pick"
+    K_CONTENT = "k_content"
 
     @property
     def display_name(self) -> str:
         names = {
             "seoul_exhibition": "서울 전시",
             "gwangju_culture": "광주 문화",
-            "film_review": "영화 리뷰",
-            "weekly_pick": "주간 추천",
+            "k_content": "K-콘텐츠",
         }
         return names[self.value]
 

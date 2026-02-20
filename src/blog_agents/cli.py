@@ -28,14 +28,12 @@ CATEGORY_MAP = {
     "gwangju_culture": ContentCategory.GWANGJU_CULTURE,
     "광주": ContentCategory.GWANGJU_CULTURE,
     "광주문화": ContentCategory.GWANGJU_CULTURE,
-    "film": ContentCategory.FILM_REVIEW,
-    "film_review": ContentCategory.FILM_REVIEW,
-    "영화": ContentCategory.FILM_REVIEW,
-    "영화리뷰": ContentCategory.FILM_REVIEW,
-    "weekly": ContentCategory.WEEKLY_PICK,
-    "weekly_pick": ContentCategory.WEEKLY_PICK,
-    "주간": ContentCategory.WEEKLY_PICK,
-    "추천": ContentCategory.WEEKLY_PICK,
+    "kcontent": ContentCategory.K_CONTENT,
+    "k_content": ContentCategory.K_CONTENT,
+    "k-content": ContentCategory.K_CONTENT,
+    "영화": ContentCategory.K_CONTENT,
+    "드라마": ContentCategory.K_CONTENT,
+    "콘텐츠": ContentCategory.K_CONTENT,
 }
 
 
