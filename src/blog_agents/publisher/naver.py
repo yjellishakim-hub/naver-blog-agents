@@ -158,11 +158,29 @@ class NaverBlogPublisher:
         await self._page.goto(editor_url)
         await self._page.wait_for_load_state("networkidle")
 
-        # SmartEditor ONE 로드 대기
-        await self._page.wait_for_selector(
-            '.se-component, .blog_editor',
-            timeout=15_000,
-        )
+        # SmartEditor ONE 로드 대기 (여러 셀렉터 시도)
+        se_selectors = [
+            '.se-component',
+            '.blog_editor',
+            '.se-viewer',
+            '.se-section-text',
+            '[data-click-area="tpb.save"]',
+        ]
+        editor_found = False
+        for sel in se_selectors:
+            try:
+                await self._page.wait_for_selector(sel, timeout=10_000)
+                editor_found = True
+                break
+            except Exception:
+                continue
+
+        if not editor_found:
+            console.print(
+                "  [yellow]SmartEditor 감지 실패, 추가 대기 중...[/]"
+            )
+            await asyncio.sleep(5)
+
         await asyncio.sleep(2)  # 에디터 초기화 대기
 
         # 임시저장 복구 팝업 등 알림 팝업 처리

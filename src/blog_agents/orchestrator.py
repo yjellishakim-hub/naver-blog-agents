@@ -43,14 +43,25 @@ class BlogOrchestrator:
         return self.config.root / "config" / "rotation_state.json"
 
     def get_next_category(self) -> ContentCategory:
-        """발행 이력을 확인해서 다음 로테이션 카테고리를 반환.
+        """요일 스케줄 기반으로 카테고리를 결정한다.
 
-        1순위: config/rotation_state.json (GitHub Actions 등 CI 환경에서도 동작)
-        2순위: output/published/ 파일명에서 추출 (로컬 환경)
+        1순위: settings.yaml의 schedule (monday/wednesday/friday 매핑)
+        2순위: 순차 로테이션 (스케줄에 없는 요일인 경우)
         """
+        # 1순위: 요일 스케줄
+        schedule = self.config._yaml.get("content", {}).get("schedule", {})
+        if schedule:
+            weekday_name = datetime.now().strftime("%A").lower()
+            scheduled_cat = schedule.get(weekday_name)
+            if scheduled_cat:
+                try:
+                    return ContentCategory(scheduled_cat)
+                except ValueError:
+                    pass
+
+        # 2순위: 순차 로테이션 (fallback)
         last_category = None
 
-        # 1순위: 상태 파일에서 읽기
         if self._rotation_state_path.exists():
             try:
                 state = json.loads(
@@ -62,20 +73,9 @@ class BlogOrchestrator:
             except (json.JSONDecodeError, ValueError):
                 pass
 
-        # 2순위: 로컬 published 파일에서 추출
-        if last_category is None:
-            published_files = self.storage.list_files("published", "*.md")
-            if published_files:
-                name = published_files[0].name
-                for cat in ContentCategory:
-                    if f"_{cat.value}_" in name:
-                        last_category = cat
-                        break
-
         if last_category is None:
             return ROTATION_ORDER[0]
 
-        # 다음 카테고리로 이동
         try:
             idx = ROTATION_ORDER.index(last_category)
             next_idx = (idx + 1) % len(ROTATION_ORDER)
