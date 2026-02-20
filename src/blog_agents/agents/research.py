@@ -72,6 +72,9 @@ class ResearchAgent(BaseAgent):
         for topic in result.topics:
             topic.category = category
 
+        # 토픽 제목 검증: raw_data에 없는 고유명사가 제목에 포함되면 제거
+        result.topics = self._validate_topic_titles(result.topics, raw_data)
+
         console.print(
             f"  [green]토픽 {len(result.topics)}개 제안 완료[/]"
         )
@@ -291,6 +294,42 @@ class ResearchAgent(BaseAgent):
     # ------------------------------------------------------------------
     # 할루시네이션 검증 메서드
     # ------------------------------------------------------------------
+
+    def _validate_topic_titles(
+        self,
+        topics: list[TopicSuggestion],
+        raw_data: str,
+    ) -> list[TopicSuggestion]:
+        """토픽 제목에 수집 데이터에 없는 고유명사가 포함되면 제목을 정제한다.
+
+        Gemini가 토픽 제안 시 영화 제목 등을 날조하는 패턴을 방지한다.
+        예: 자료에 "넘버원"만 있는데 "넘버원 리미니트 밥상"으로 변형.
+        """
+        corpus_lower = raw_data.lower()
+
+        for topic in topics:
+            # 제목에서 따옴표로 감싼 고유명사 추출
+            quoted = self.extract_proper_nouns(topic.title)
+            for noun in quoted:
+                # 원본 데이터에 존재하면 OK
+                if noun.lower() in corpus_lower:
+                    continue
+                # 부분 매칭: 고유명사의 핵심 단어가 corpus에 있는지
+                words = noun.split()
+                if len(words) <= 1:
+                    continue
+                # 각 단어 중 corpus에 있는 것만 남겨서 복원
+                found_words = [w for w in words if w.lower() in corpus_lower]
+                if found_words and len(found_words) < len(words):
+                    original = noun
+                    corrected = " ".join(found_words)
+                    topic.title = topic.title.replace(original, corrected)
+                    console.print(
+                        f"  [yellow]토픽 제목 정정: '{original}' → "
+                        f"'{corrected}'[/]"
+                    )
+
+        return topics
 
     @staticmethod
     def extract_proper_nouns(text: str) -> set[str]:
