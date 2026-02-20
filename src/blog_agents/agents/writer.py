@@ -14,10 +14,10 @@ console = Console()
 
 # 카테고리별 스타일 프롬프트 파일 매핑
 STYLE_PROMPTS = {
-    ContentCategory.MUSEUM: "writer_museum.md",
-    ContentCategory.GALLERY: "writer_gallery.md",
-    ContentCategory.ART_FAIR: "writer_artfair.md",
-    ContentCategory.SPECIAL: "writer_special.md",
+    ContentCategory.SEOUL_EXHIBITION: "writer_agent.md",  # 서울 전시는 기본 프롬프트 사용
+    ContentCategory.GWANGJU_CULTURE: "writer_gwangju.md",
+    ContentCategory.FILM_REVIEW: "writer_film.md",
+    ContentCategory.WEEKLY_PICK: "writer_agent.md",  # 주간 추천은 기본 프롬프트 사용
 }
 
 

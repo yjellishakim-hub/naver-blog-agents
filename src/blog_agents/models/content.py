@@ -33,7 +33,7 @@ class Draft(BaseModel):
     research_brief_id: str = ""
     version: int = 1
     created_at: datetime = Field(default_factory=datetime.now)
-    category: ContentCategory = ContentCategory.MUSEUM
+    category: ContentCategory = ContentCategory.SEOUL_EXHIBITION
     title: str = ""
     meta_description: str = ""
     keywords_used: list[str] = Field(default_factory=list)
