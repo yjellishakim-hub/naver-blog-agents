@@ -14,7 +14,7 @@ from blog_agents.orchestrator import BlogOrchestrator
 
 app = typer.Typer(
     name="blog-agents",
-    help="한국 미술 전시 블로그 멀티 에이전트 자동화 시스템",
+    help="한국 문화예술 블로그 멀티 에이전트 자동화 시스템",
     no_args_is_help=True,
 )
 console = Console()
@@ -44,7 +44,7 @@ def _resolve_category(category: str) -> ContentCategory:
         return CATEGORY_MAP[key]
     raise typer.BadParameter(
         f"알 수 없는 카테고리: '{category}'. "
-        f"사용 가능: museum, gallery, artfair, special"
+        f"사용 가능: seoul, gwangju, kcontent"
     )
 
 
@@ -58,7 +58,7 @@ def _get_config(project_dir: Optional[str] = None) -> AppConfig:
 def generate(
     category: Optional[str] = typer.Argument(
         None,
-        help="콘텐츠 카테고리 (museum, gallery, artfair, special). 미지정 시 자동 로테이션",
+        help="콘텐츠 카테고리 (seoul, gwangju, kcontent). 미지정 시 자동 로테이션",
     ),
     auto: bool = typer.Option(
         False, "--auto", "-a",
@@ -176,7 +176,7 @@ def _auto_publish_naver(config: AppConfig, category, blog_post, is_draft: bool =
 def research(
     category: str = typer.Argument(
         ...,
-        help="콘텐츠 카테고리 (museum, gallery, artfair, special)",
+        help="콘텐츠 카테고리 (seoul, gwangju, kcontent)",
     ),
     project_dir: Optional[str] = typer.Option(
         None, "--project-dir", "-d",

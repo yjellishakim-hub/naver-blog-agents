@@ -1,7 +1,7 @@
 [project]
 name = "blog-agents"
 version = "0.1.0"
-description = "한국 미술 전시 블로그 멀티 에이전트 자동화 시스템"
+description = "한국 문화예술 블로그 멀티 에이전트 자동화 시스템"
 requires-python = ">=3.9"
 dependencies = [
     "google-genai>=1.0.0",
