@@ -1,9 +1,9 @@
 name: Auto Blog Generation
 
 on:
-  # 스케줄: 월/수/금 오전 10시 (KST 기준)
-  schedule:
-    - cron: '0 1 * * 1,3,5'  # UTC 01:00 = KST 10:00
+  # 스케줄 비활성화 (수동 실행만 가능)
+  # schedule:
+  #   - cron: '0 1 * * 1,3,5'  # UTC 01:00 = KST 10:00
 
   # 수동 실행 옵션
   workflow_dispatch:
