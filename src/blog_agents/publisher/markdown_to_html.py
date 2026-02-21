@@ -9,20 +9,6 @@ def markdown_to_html(md_text: str) -> str:
     # frontmatter 제거
     md_text = re.sub(r"^---\n.*?\n---\n*", "", md_text, flags=re.DOTALL)
 
-    # 목차(TOC) 생성을 위해 H2 헤딩 사전 수집
-    toc_items = []
-    _skip_headings = {"참고자료", "참고 자료", "출처", "References"}
-    for line in md_text.split("\n"):
-        h2_match = re.match(r"^##\s+(.+)", line.strip())
-        if h2_match:
-            heading_text = h2_match.group(1).strip()
-            # 마크다운 서식 제거
-            clean_text = re.sub(r"\*+", "", heading_text).strip()
-            if clean_text in _skip_headings:
-                continue
-            anchor = re.sub(r"[^\w가-힣]", "-", clean_text).strip("-").lower()
-            toc_items.append((clean_text, anchor))
-
     lines = md_text.split("\n")
     html_lines = []
     in_list = False
@@ -30,14 +16,13 @@ def markdown_to_html(md_text: str) -> str:
     in_sub_list = False
     in_blockquote = False
     in_references = False
-    toc_inserted = False
-    toc_index = 0
+    first_h2_seen = False
 
     for line in lines:
         stripped = line.strip()
         indent = len(line) - len(line.lstrip())
 
-        # 빈 줄
+        # 빈 줄 → 문단 사이 여백 추가
         if not stripped:
             if in_sub_list:
                 html_lines.append("</ul></li>")
@@ -51,6 +36,7 @@ def markdown_to_html(md_text: str) -> str:
             if in_blockquote:
                 html_lines.append("</blockquote>")
                 in_blockquote = False
+            html_lines.append("<br/>")
             continue
 
         # 헤딩
@@ -61,10 +47,6 @@ def markdown_to_html(md_text: str) -> str:
             # H1은 제목이므로 생략 (블로그 에디터가 자동 생성)
             if level == 1:
                 continue
-            # 첫 번째 H2 직전에 목차 삽입
-            if level == 2 and not toc_inserted and len(toc_items) >= 3:
-                html_lines.append(_build_toc(toc_items))
-                toc_inserted = True
             # "참고자료" H2는 references 섹션으로 변환
             clean_heading = re.sub(r"<[^>]+>", "", text).strip()
             if level == 2 and clean_heading in ("참고자료", "참고 자료", "출처", "References"):
@@ -73,19 +55,12 @@ def markdown_to_html(md_text: str) -> str:
                 html_lines.append('<p class="ref-title">References</p>')
                 html_lines.append("<ul>")
                 continue
-            # H2 앞에 섹션 구분 장식 삽입 (첫 H2 제외)
-            if level == 2 and toc_inserted:
-                html_lines.append(
-                    '<div class="section-divider">◆</div>'
-                )
-            # H2에 앵커 추가 (목차 링크용)
-            if level == 2 and toc_index < len(toc_items):
-                anchor = toc_items[toc_index][1]
-                html_lines.append(f'<a name="{anchor}"></a>')
-                html_lines.append(f'<h{level} id="{anchor}">{text}</h{level}>')
-                toc_index += 1
-            else:
-                html_lines.append(f"<h{level}>{text}</h{level}>")
+            # H2 사이 여백 추가 (첫 H2 제외)
+            if level == 2:
+                if first_h2_seen:
+                    html_lines.append("<br/>")
+                first_h2_seen = True
+            html_lines.append(f"<h{level}>{text}</h{level}>")
             continue
 
         # 블록 레벨 이미지: ![캡션](경로)
@@ -226,20 +201,6 @@ def markdown_to_html(md_text: str) -> str:
         html_lines.append("</ul></div>")
 
     return "\n".join(html_lines)
-
-
-def _build_toc(items: list[tuple[str, str]]) -> str:
-    """H2 헤딩 목록으로부터 목차 HTML을 생성한다."""
-    toc_lines = [
-        '<nav class="toc">',
-        '<p class="toc-title">Contents</p>',
-        "<ol>",
-    ]
-    for text, anchor in items:
-        toc_lines.append(f'  <li><a href="#{anchor}">{text}</a></li>')
-    toc_lines.append("</ol>")
-    toc_lines.append("</nav>")
-    return "\n".join(toc_lines)
 
 
 def _format_reference(text: str) -> str:
