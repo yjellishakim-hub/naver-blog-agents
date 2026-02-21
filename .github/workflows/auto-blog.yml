@@ -30,42 +30,23 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[naver]"
+          pip install -e .
 
-      - name: Install Playwright browsers
-        run: |
-          playwright install chromium
-          playwright install-deps chromium
-
-      - name: Generate blog post
+      - name: Generate blog post (글 생성만, 네이버 발행 제외)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NAVER_BLOG_ID: ${{ secrets.NAVER_BLOG_ID }}
         run: |
           if [ -z "${{ github.event.inputs.category }}" ]; then
-            # 자동 로테이션
-            python -m blog_agents generate --auto --draft
+            python -m blog_agents generate --auto
           else
-            # 수동 선택 카테고리
-            python -m blog_agents generate ${{ github.event.inputs.category }} --auto --draft
+            python -m blog_agents generate ${{ github.event.inputs.category }} --auto
           fi
 
-      - name: Upload generated files
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: blog-post-${{ github.run_number }}
-          path: |
-            output/published/*.md
-            output/research/*.json
-            output/drafts/*.md
-          retention-days: 30
-
-      - name: Commit rotation state
+      - name: Commit generated files
         if: success()
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add config/rotation_state.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update rotation state [skip ci]"
+          git add config/rotation_state.json output/published/ output/research/
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: auto-generate blog post [skip ci]"
           git push
