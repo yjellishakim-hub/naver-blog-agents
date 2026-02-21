@@ -16,6 +16,7 @@ def markdown_to_html(md_text: str) -> str:
     in_sub_list = False
     in_blockquote = False
     in_references = False
+    in_tag_section = False
     first_h2_seen = False
 
     for line in lines:
@@ -24,6 +25,9 @@ def markdown_to_html(md_text: str) -> str:
 
         # 빈 줄 → 문단 사이 여백 추가
         if not stripped:
+            if in_tag_section:
+                in_tag_section = False
+                continue
             if in_sub_list:
                 html_lines.append("</ul></li>")
                 in_sub_list = False
@@ -39,6 +43,10 @@ def markdown_to_html(md_text: str) -> str:
             html_lines.append("<br/>")
             continue
 
+        # 태그 섹션 내 내용은 건너뛰기
+        if in_tag_section:
+            continue
+
         # 헤딩
         heading_match = re.match(r"^(#{1,4})\s+(.*)", stripped)
         if heading_match:
@@ -47,8 +55,12 @@ def markdown_to_html(md_text: str) -> str:
             # H1은 제목이므로 생략 (블로그 에디터가 자동 생성)
             if level == 1:
                 continue
-            # "참고자료" H2는 references 섹션으로 변환
             clean_heading = re.sub(r"<[^>]+>", "", text).strip()
+            # "네이버 검색 노출 최적화 태그" 섹션 → 본문에서 제거
+            if "네이버" in clean_heading and "태그" in clean_heading:
+                in_tag_section = True
+                continue
+            # "참고자료" H2는 references 섹션으로 변환
             if level == 2 and clean_heading in ("참고자료", "참고 자료", "출처", "References"):
                 in_references = True
                 html_lines.append('<div class="references">')
@@ -97,36 +109,15 @@ def markdown_to_html(md_text: str) -> str:
                 html_lines.append(f"  <li>• {text}</li>")
                 continue
 
-        # 면책 고지
+        # 면책 고지 → 본문에서 제거
         if ("면책 고지" in stripped or "면책고지" in stripped
                 or "본 글은 정보 제공 목적" in stripped
-                or "공식 사이트에서 확인" in stripped):
-            text = _inline_format(stripped.lstrip("*> "))
-            # 이미 disclaimer div가 열려있으면 추가, 아니면 새로 열기
-            if html_lines and '<div class="disclaimer">' in html_lines[-1]:
-                # 이전 닫는 태그 제거하고 이어붙이기
-                last = html_lines.pop()
-                last = last.replace("</div>", "")
-                html_lines.append(f'{last}<br/>{text}</div>')
-            else:
-                html_lines.append(
-                    f'<div class="disclaimer">'
-                    f'<span class="disclaimer-icon">ⓘ</span>{text}</div>'
-                )
-            continue
-
-        # 면책 고지 두 번째 줄 (전문가 상담 안내)
-        if "방문 전" in stripped or "변경될 수 있으니" in stripped:
-            text = _inline_format(stripped.lstrip("*> "))
-            if html_lines and "disclaimer" in html_lines[-1]:
-                last = html_lines.pop()
-                last = last.replace("</div>", "")
-                html_lines.append(f'{last}<br/>{text}</div>')
-            else:
-                html_lines.append(
-                    f'<div class="disclaimer">'
-                    f'<span class="disclaimer-icon">ⓘ</span>{text}</div>'
-                )
+                or "본 글은 영화 관람" in stripped
+                or "본 글은 전시 관람" in stripped
+                or ("공식 사이트에서 확인" in stripped and stripped.startswith(">"))
+                or ("방문 전" in stripped and stripped.startswith(">"))
+                or ("변경될 수 있으니" in stripped and stripped.startswith(">"))
+                or ("예매 전" in stripped and stripped.startswith(">"))):
             continue
 
         # 순서 있는 리스트
